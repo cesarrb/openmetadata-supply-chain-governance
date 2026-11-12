@@ -1,0 +1,12 @@
+.om_token
+.venv/
+__pycache__/
+dbt/target/
+dbt/logs/
+dbt/.user.yml
+docker/docker-volume/
+docker/pull.log
+logs/
+*.pyc
+.DS_Store
+PITCH-ES.md

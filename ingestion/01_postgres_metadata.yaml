@@ -1,0 +1,30 @@
+# Metadata ingestion: tables, columns, comments, view definitions (-> view lineage).
+source:
+  type: postgres
+  serviceName: erp_postgres
+  serviceConnection:
+    config:
+      type: Postgres
+      hostPort: openmetadata_postgresql:5432
+      username: erp_reader
+      authType:
+        password: erp_reader
+      database: erp
+      ingestAllDatabases: false
+  sourceConfig:
+    config:
+      type: DatabaseMetadata
+      includeViews: true
+      includeTags: true
+      schemaFilterPattern:
+        includes: ["sap_erp", "analytics_staging", "analytics_marts"]
+sink:
+  type: metadata-rest
+  config: {}
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata_server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "${OM_JWT}"

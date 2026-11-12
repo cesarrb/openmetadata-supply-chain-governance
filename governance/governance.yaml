@@ -1,0 +1,169 @@
+# Governance-as-code: the single source of truth for ownership, domains, classification,
+# business glossary and certification of the Supply Chain data estate.
+# Applied with:  uv run python scripts/apply_governance.py
+# Every change goes through a pull request, so the catalogue has an audit trail.
+
+teams:
+  - name: data-governance-office
+    displayName: Data Governance Office
+    description: Sets standards, runs the catalogue, approves new domains and glossary terms.
+  - name: supply-chain-planning
+    displayName: Supply Chain Planning
+    description: Business owner of demand plans, inventory policy and OTIF reporting.
+  - name: procurement
+    displayName: Procurement
+    description: Business owner of vendor master data and purchase orders.
+  - name: sales-operations
+    displayName: Sales Operations
+    description: Business owner of customer master data, sales orders and deliveries.
+
+domains:
+  - name: SupplyChain
+    displayName: Supply Chain
+    domainType: Aggregate
+    owner: supply-chain-planning
+    description: Planning, inventory and delivery performance (OTIF, Plan vs Actual, Days of Inventory).
+  - name: Procurement
+    displayName: Procurement
+    domainType: Source-aligned
+    owner: procurement
+    description: Vendors and purchase orders as recorded in the ERP.
+  - name: SalesAndCustomer
+    displayName: Sales & Customer
+    domainType: Source-aligned
+    owner: sales-operations
+    description: Customers, sales orders and outbound deliveries as recorded in the ERP.
+
+data_products:
+  - name: SupplyChainKPIs
+    displayName: Supply Chain Performance KPIs
+    domain: SupplyChain
+    owner: supply-chain-planning
+    description: Certified KPI tables behind the Supply Chain Performance dashboard.
+    assets: [analytics_marts.fct_otif, analytics_marts.fct_plan_vs_actual,
+             analytics_marts.fct_inventory_position, analytics_marts.rpt_otif_monthly,
+             analytics_marts.dim_material]
+
+classifications:
+  - name: Confidentiality
+    description: Information-security label that decides who may access a data asset.
+    mutuallyExclusive: true
+    tags:
+      - {name: Public, description: May be shared outside the company.}
+      - {name: Internal, description: Any employee may access. Default for operational data.}
+      - {name: Confidential, description: Need-to-know. Commercial terms, prices, vendor tax IDs.}
+      - {name: Restricted, description: Named individuals only. Requires the owner's approval.}
+
+glossary:
+  name: SupplyChainGlossary
+  displayName: Supply Chain Glossary
+  owner: data-governance-office
+  reviewer: supply-chain-planning
+  description: Agreed business definitions. One definition per term, owned by the business.
+  terms:
+    - name: OTIF
+      displayName: OTIF (On Time In Full)
+      synonyms: [On Time In Full, Perfect Order Rate]
+      related: [OnTime, InFull, RequestedDeliveryDate]
+      description: >
+        Share of sales order lines delivered on or before the customer requested
+        delivery date AND with the full ordered quantity. Measured on standard orders (OR)
+        that have been shipped. Formula: OTIF lines / measured lines.
+    - name: OnTime
+      displayName: On Time
+      description: Goods issue date on or before the customer requested delivery date.
+    - name: InFull
+      displayName: In Full
+      description: Delivered quantity greater than or equal to the ordered quantity.
+    - name: RequestedDeliveryDate
+      displayName: Requested Delivery Date
+      synonyms: [VDATU, Customer Requested Date]
+      description: Date the customer asked to receive the goods (SAP field VDATU). Baseline for On Time.
+    - name: GoodsIssue
+      displayName: Goods Issue
+      synonyms: [WADAT_IST, Shipment Date]
+      description: Posting that removes stock from the plant when goods are shipped (SAP field WADAT_IST).
+    - name: PlanVsActual
+      displayName: Plan vs Actual
+      synonyms: [Plan versus Actual]
+      related: [ForecastAccuracy, ConsensusDemandPlan]
+      description: Monthly comparison of the consensus demand plan against actual order intake per material and plant.
+    - name: ForecastAccuracy
+      displayName: Forecast Accuracy
+      synonyms: [1 - MAPE]
+      description: 1 - |actual - plan| / actual, floored at 0. Undefined when actual demand is zero.
+    - name: ConsensusDemandPlan
+      displayName: Consensus Demand Plan
+      description: Demand plan agreed in the monthly S&OP cycle, exported from the planning tool.
+    - name: SafetyStock
+      displayName: Safety Stock
+      synonyms: [EISBE, Buffer Stock]
+      description: Minimum stock kept per material and plant to absorb demand and supply variability (SAP field EISBE).
+    - name: DaysOfInventory
+      displayName: Days of Inventory
+      synonyms: [DOI, Days of Supply, Stock Coverage]
+      description: Unrestricted stock divided by average daily demand of the last 90 days.
+    - name: LeadTime
+      displayName: Planned Lead Time
+      synonyms: [PLIFZ, Planned Delivery Time]
+      description: Planned number of days from purchase order to goods receipt (SAP field PLIFZ).
+    - name: MaterialMaster
+      displayName: Material Master
+      synonyms: [MARA, Item Master]
+      description: Golden record of every material (general data in MARA, plant data in MARC).
+    - name: UnrestrictedStock
+      displayName: Unrestricted Stock
+      synonyms: [LABST]
+      description: Stock free for use, not blocked or in quality inspection (SAP field LABST).
+
+# Table-level assignments. Keys are "<schema>.<table>" inside service erp_postgres / database erp.
+assets:
+  sap_erp.mara:        {owner: supply-chain-planning, domain: SupplyChain, tier: Tier1, confidentiality: Internal, glossary: [MaterialMaster]}
+  sap_erp.marc:        {owner: supply-chain-planning, domain: SupplyChain, tier: Tier1, confidentiality: Internal, glossary: [MaterialMaster]}
+  sap_erp.mard:        {owner: supply-chain-planning, domain: SupplyChain, tier: Tier2, confidentiality: Internal, glossary: [UnrestrictedStock]}
+  sap_erp.demand_plan: {owner: supply-chain-planning, domain: SupplyChain, tier: Tier2, confidentiality: Internal, glossary: [ConsensusDemandPlan]}
+  sap_erp.lfa1:        {owner: procurement, domain: Procurement, tier: Tier1, confidentiality: Restricted}
+  sap_erp.ekko:        {owner: procurement, domain: Procurement, tier: Tier2, confidentiality: Confidential}
+  sap_erp.ekpo:        {owner: procurement, domain: Procurement, tier: Tier2, confidentiality: Confidential}
+  sap_erp.kna1:        {owner: sales-operations, domain: SalesAndCustomer, tier: Tier1, confidentiality: Restricted}
+  sap_erp.vbak:        {owner: sales-operations, domain: SalesAndCustomer, tier: Tier2, confidentiality: Internal}
+  sap_erp.vbap:        {owner: sales-operations, domain: SalesAndCustomer, tier: Tier2, confidentiality: Internal}
+  sap_erp.likp:        {owner: sales-operations, domain: SalesAndCustomer, tier: Tier2, confidentiality: Internal, glossary: [GoodsIssue]}
+  sap_erp.lips:        {owner: sales-operations, domain: SalesAndCustomer, tier: Tier2, confidentiality: Internal}
+  analytics_marts.dim_material:           {owner: supply-chain-planning, domain: SupplyChain, tier: Tier1, confidentiality: Internal, glossary: [MaterialMaster]}
+  analytics_marts.fct_otif:               {owner: supply-chain-planning, domain: SupplyChain, tier: Tier1, confidentiality: Internal, glossary: [OTIF], certified: true}
+  analytics_marts.rpt_otif_monthly:       {owner: supply-chain-planning, domain: SupplyChain, tier: Tier1, confidentiality: Internal, glossary: [OTIF], certified: true}
+  analytics_marts.fct_plan_vs_actual:     {owner: supply-chain-planning, domain: SupplyChain, tier: Tier1, confidentiality: Internal, glossary: [PlanVsActual, ForecastAccuracy], certified: true}
+  analytics_marts.fct_inventory_position: {owner: supply-chain-planning, domain: SupplyChain, tier: Tier1, confidentiality: Confidential, glossary: [DaysOfInventory, SafetyStock], certified: true}
+
+# Column-level tags (PII the auto-classifier missed, plus glossary links on key columns).
+columns:
+  sap_erp.lfa1.contact_phone:   {tags: [PII.Sensitive]}
+  sap_erp.lfa1.stceg:           {tags: [Confidentiality.Confidential]}
+  sap_erp.vbak.vdatu:           {glossary: [RequestedDeliveryDate]}
+  sap_erp.likp.wadat_ist:       {glossary: [GoodsIssue]}
+  sap_erp.marc.eisbe:           {glossary: [SafetyStock]}
+  sap_erp.marc.plifz:           {glossary: [LeadTime]}
+  analytics_marts.fct_otif.is_otif:      {glossary: [OTIF]}
+  analytics_marts.fct_otif.is_on_time:   {glossary: [OnTime]}
+  analytics_marts.fct_otif.is_in_full:   {glossary: [InFull]}
+  analytics_marts.rpt_otif_monthly.otif_rate: {glossary: [OTIF]}
+  analytics_marts.fct_plan_vs_actual.forecast_accuracy: {glossary: [ForecastAccuracy]}
+  analytics_marts.fct_inventory_position.days_of_inventory: {glossary: [DaysOfInventory]}
+  analytics_marts.fct_inventory_position.safety_stock_qty:  {glossary: [SafetyStock]}
+
+# BI layer: the dashboard is registered through the API (custom dashboard service) so the
+# lineage runs from the ERP table all the way to the chart the business looks at.
+dashboard:
+  service: supply_chain_bi
+  name: supply_chain_performance
+  displayName: Supply Chain Performance
+  owner: supply-chain-planning
+  domain: SupplyChain
+  tier: Tier1
+  glossary: [OTIF, PlanVsActual, DaysOfInventory]
+  description: Monthly OTIF by plant, Plan vs Actual and inventory health. Used in the monthly S&OP review.
+  charts:
+    - {name: otif_by_plant, displayName: OTIF by plant (monthly), chartType: Line, source: analytics_marts.rpt_otif_monthly, description: "OTIF, on-time and in-full rate per plant and month. Target 95 %."}
+    - {name: plan_vs_actual, displayName: Plan vs Actual and forecast accuracy, chartType: Bar, source: analytics_marts.fct_plan_vs_actual, description: "Consensus plan vs. actual order intake and forecast accuracy by material group."}
+    - {name: inventory_health, displayName: Days of Inventory and safety-stock breaches, chartType: Table, source: analytics_marts.fct_inventory_position, description: "Materials below safety stock and with excess Days of Inventory."}

@@ -1,0 +1,24 @@
+# dbt ingestion: model descriptions, model-level lineage and dbt test results (data quality).
+source:
+  type: dbt
+  serviceName: erp_postgres
+  sourceConfig:
+    config:
+      type: DBT
+      dbtConfigSource:
+        dbtConfigType: local
+        dbtManifestFilePath: /opt/dbt/manifest.json
+        dbtCatalogFilePath: /opt/dbt/catalog.json
+        dbtRunResultsFilePath: /opt/dbt/run_results.json
+      dbtUpdateDescriptions: true
+      includeTags: true
+sink:
+  type: metadata-rest
+  config: {}
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata_server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "${OM_JWT}"

@@ -1,0 +1,34 @@
+version: 2
+models:
+  - name: dim_material
+    description: Material x plant dimension used by every supply-chain KPI.
+    columns:
+      - name: material_plant_key
+        data_tests: [unique, not_null]
+  - name: fct_otif
+    description: >
+      OTIF (On Time In Full) at sales-order-line level. A line is OTIF when it is
+      shipped on or before the requested delivery date AND the full quantity is delivered.
+    columns:
+      - name: is_otif
+        description: True when the line is both on time and in full.
+      - name: is_on_time
+        description: Goods issue date <= customer requested delivery date.
+      - name: is_in_full
+        description: Delivered quantity >= ordered quantity.
+  - name: fct_plan_vs_actual
+    description: Monthly Plan vs Actual (consensus demand plan vs. actual order intake) with forecast accuracy.
+    columns:
+      - name: forecast_accuracy
+        description: 1 - |actual - plan| / actual, floored at 0. Null when there is no actual demand.
+  - name: fct_inventory_position
+    description: Stock quantity and value per material/plant, safety-stock breaches and Days of Inventory.
+    columns:
+      - name: days_of_inventory
+        description: Stock / average daily demand of the last 90 days.
+  - name: rpt_otif_monthly
+    description: Monthly OTIF, on-time and in-full rates per plant. Feeds the Supply Chain Performance dashboard.
+    columns:
+      - name: otif_rate
+        data_tests:
+          - not_null

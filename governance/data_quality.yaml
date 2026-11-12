@@ -1,0 +1,21 @@
+# Data-quality contract run by OpenMetadata's own test runner (complements the dbt tests).
+# Each test has an owner-facing rationale so a failure tells the business why it matters.
+tests:
+  sap_erp.mara:
+    - {name: mara_matnr_unique, column: matnr, definition: columnValuesToBeUnique, why: "One golden record per material"}
+    - {name: mara_row_count, definition: tableRowCountToBeBetween, params: {minValue: 10, maxValue: 100000}, why: "Detect empty or truncated ERP extract"}
+  sap_erp.likp:
+    - {name: likp_goods_issue_date_not_null, column: wadat_ist, definition: columnValuesToBeNotNull, why: "Deliveries without goods-issue date are excluded from OTIF"}
+  sap_erp.mard:
+    - {name: mard_stock_not_negative, column: labst, definition: columnValuesToBeBetween, params: {minValue: 0}, why: "Negative unrestricted stock signals posting errors"}
+  sap_erp.ekpo:
+    - {name: ekpo_material_exists_in_master, definition: tableCustomSQLQuery, params: {sqlExpression: "select i.* from sap_erp.ekpo i left join sap_erp.mara m on m.matnr = i.matnr where m.matnr is null", strategy: ROWS}, why: "Purchase orders for materials missing from the material master"}
+  sap_erp.lfa1:
+    - {name: lfa1_email_format, column: contact_email, definition: columnValuesToMatchRegex, params: {regex: "^[^@ ]+@[^@ ]+\\.[a-z]{2,}$"}, why: "Vendor contact e-mails must be valid"}
+  analytics_marts.rpt_otif_monthly:
+    - {name: otif_rate_between_0_and_1, column: otif_rate, definition: columnValuesToBeBetween, params: {minValue: 0, maxValue: 1}, why: "KPI outside 0-100 % means a broken calculation"}
+    - {name: otif_rate_not_null, column: otif_rate, definition: columnValuesToBeNotNull, why: "Every plant-month must have an OTIF value"}
+  analytics_marts.fct_plan_vs_actual:
+    - {name: forecast_accuracy_between_0_and_1, column: forecast_accuracy, definition: columnValuesToBeBetween, params: {minValue: 0, maxValue: 1}, why: "Accuracy is a ratio between 0 and 1"}
+  analytics_marts.fct_inventory_position:
+    - {name: inventory_key_unique, column: material_plant_key, definition: columnValuesToBeUnique, why: "One inventory position per material and plant"}

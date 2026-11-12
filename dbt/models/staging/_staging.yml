@@ -1,0 +1,65 @@
+version: 2
+models:
+  - name: stg_material
+    description: Cleaned material master (one row per material). Renames SAP MARA fields to business names.
+    columns:
+      - name: material_id
+        description: SAP material number (MATNR).
+        data_tests: [unique, not_null]
+      - name: material_type
+        description: ROH raw material, HALB semi-finished, FERT finished good.
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["ROH", "HALB", "FERT"]}
+  - name: stg_material_plant
+    description: Plant-specific planning parameters (lead time, safety stock, standard price) from MARC.
+    columns:
+      - name: material_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('stg_material'), field: material_id}
+      - name: safety_stock_qty
+        description: Safety stock in base unit of measure.
+  - name: stg_customer
+    description: Customer master WITHOUT personal contact data (data minimisation; PII stays in the raw layer).
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+  - name: stg_vendor
+    description: Vendor master without personal contact data.
+    columns:
+      - name: vendor_id
+        data_tests: [unique, not_null]
+  - name: stg_purchase_order_line
+    description: Purchase order lines (EKKO header joined to EKPO items).
+    columns:
+      - name: material_id
+        description: Material ordered. Must exist in the material master.
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_material'), field: material_id}
+      - name: vendor_id
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_vendor'), field: vendor_id}
+  - name: stg_sales_order_line
+    description: Sales order lines (VBAK header joined to VBAP items).
+    columns:
+      - name: requested_delivery_date
+        description: Date the customer asked to receive the goods. Basis of the OTIF on-time check.
+        data_tests: [not_null]
+  - name: stg_delivery_line
+    description: Outbound delivery lines (LIKP header joined to LIPS items).
+    columns:
+      - name: actual_goods_issue_date
+        description: Actual goods issue (shipping) date. Required for OTIF.
+        data_tests: [not_null]
+  - name: stg_stock
+    description: Unrestricted stock by material, plant and storage location (MARD).
+    columns:
+      - name: unrestricted_stock_qty
+        data_tests:
+          - non_negative
+  - name: stg_demand_plan
+    description: Monthly consensus demand plan from the planning tool.

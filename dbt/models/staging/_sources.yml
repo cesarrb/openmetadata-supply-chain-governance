@@ -1,0 +1,18 @@
+version: 2
+sources:
+  - name: sap_erp
+    description: Raw ERP extract (SAP ECC-style tables).
+    schema: sap_erp
+    tables:
+      - name: mara
+      - name: marc
+      - name: lfa1
+      - name: kna1
+      - name: ekko
+      - name: ekpo
+      - name: vbak
+      - name: vbap
+      - name: likp
+      - name: lips
+      - name: mard
+      - name: demand_plan

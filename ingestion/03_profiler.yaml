@@ -1,0 +1,22 @@
+# Profiler: row counts, null %, distinct values, min/max per column.
+source:
+  type: postgres
+  serviceName: erp_postgres
+  sourceConfig:
+    config:
+      type: Profiler
+      schemaFilterPattern:
+        includes: ["sap_erp", "analytics_marts"]
+processor:
+  type: orm-profiler
+  config: {}
+sink:
+  type: metadata-rest
+  config: {}
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata_server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "${OM_JWT}"

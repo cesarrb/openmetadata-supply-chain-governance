@@ -1,0 +1,23 @@
+name: supply_chain_analytics
+version: "1.0.0"
+profile: supply_chain_analytics
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: "target"
+clean-targets: ["target"]
+
+models:
+  supply_chain_analytics:
+    +meta:
+      domain: Supply Chain
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+
+on-run-end:
+  - "grant usage on schema {{ target.schema }}_staging, {{ target.schema }}_marts to erp_reader"
+  - "grant select on all tables in schema {{ target.schema }}_staging, {{ target.schema }}_marts to erp_reader"

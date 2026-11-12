@@ -1,0 +1,25 @@
+# Auto-classification: scans column names and sample values and tags personal data (PII).
+source:
+  type: postgres
+  serviceName: erp_postgres
+  sourceConfig:
+    config:
+      type: AutoClassification
+      storeSampleData: false
+      enableAutoClassification: true
+      confidence: 80
+      schemaFilterPattern:
+        includes: ["sap_erp"]
+processor:
+  type: orm-profiler
+  config: {}
+sink:
+  type: metadata-rest
+  config: {}
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata_server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "${OM_JWT}"
