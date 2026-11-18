@@ -7,7 +7,10 @@ Usage:  uv run python scripts/apply_governance.py
 """
 from __future__ import annotations
 
+import base64
+import os
 import pathlib
+import secrets
 import sys
 
 import requests
@@ -138,13 +141,14 @@ def apply_columns():
         tkey, col = key.rsplit(".", 1)
         by_table.setdefault(tkey, {})[col] = c
     for tkey, cols in by_table.items():
-        t = get(f"/tables/name/{table_fqn(tkey)}?fields=columns")
+        t = get(f"/tables/name/{table_fqn(tkey)}?fields=columns,tags")
         ops = []
         for i, column in enumerate(t["columns"]):
             if column["name"] not in cols:
                 continue
             c = cols[column["name"]]
-            existing = [x for x in column.get("tags", []) if x.get("source") == "Classification"]
+            existing = [x for x in column.get("tags", []) if x.get("source") == "Classification"
+                        and not (c.get("reject_auto") and x.get("labelType") == "Generated")]
             wanted = existing + [tag_label(x) for x in c.get("tags", []) if x not in {e["tagFQN"] for e in existing}]
             wanted += [tag_label(term_fqn(g), "Glossary") for g in c.get("glossary", [])]
             ops.append({"op": "add", "path": f"/columns/{i}/tags", "value": wanted})
@@ -166,30 +170,69 @@ def apply_data_products():
 # ------------------------------------------------------------- dashboard + lineage
 def apply_dashboard():
     d = CFG["dashboard"]
-    call("PUT", "/services/dashboardServices", {
-        "name": d["service"], "serviceType": "CustomDashboard",
-        "description": "BI layer of the Supply Chain domain (registered via API).",
-        "connection": {"config": {"type": "CustomDashboard", "sourcePythonClass": "none"}}})
-    chart_ids = []
-    for c in d["charts"]:
-        ch = call("PUT", "/charts", {"name": c["name"], "displayName": c["displayName"],
-                                     "chartType": c["chartType"], "service": d["service"],
-                                     "description": c.get("description", "")})
-        chart_ids.append((ch, c["source"]))
-    dash = call("PUT", "/dashboards", {
-        "name": d["name"], "displayName": d["displayName"], "description": d["description"],
-        "service": d["service"], "charts": [ch["fullyQualifiedName"] for ch, _ in chart_ids],
-        "owners": [team_ref(d["owner"])], "domains": [d["domain"]],
-        "sourceUrl": "http://localhost:8585",
-        "tags": [tag_label(f"Tier.{d['tier']}")] + [tag_label(term_fqn(g), "Glossary") for g in d.get("glossary", [])]})
-    for ch, src in chart_ids:
-        tbl = get(f"/tables/name/{table_fqn(src)}")
-        call("PUT", "/lineage", {"edge": {"fromEntity": {"id": tbl["id"], "type": "table"},
-                                          "toEntity": {"id": ch["id"], "type": "chart"},
-                                          "lineageDetails": {"description": "Chart reads this table", "source": "Manual"}}})
-        call("PUT", "/lineage", {"edge": {"fromEntity": {"id": ch["id"], "type": "chart"},
-                                          "toEntity": {"id": dash["id"], "type": "dashboard"}}})
-    print(f"dashboard: {d['displayName']} with {len(chart_ids)} charts + lineage")
+    for legacy in d.get("legacy_services", []):
+        svc = get(f"/services/dashboardServices/name/{legacy}")
+        if svc:
+            call("DELETE", f"/services/dashboardServices/{svc['id']}?recursive=true&hardDelete=true")
+            print(f"  removed legacy dashboard service {legacy}")
+    found = call("GET", f"/dashboards?service={d['service']}&limit=100&fields=charts")["data"]
+    dash = next((x for x in found if x.get("displayName") == d["displayName"]), None)
+    if not dash:
+        print(f"  ! dashboard '{d['displayName']}' not ingested yet (run ingestion/05_metabase.yaml)")
+        return
+    dom = get(f"/domains/name/{d['domain']}")
+    tags = [tag_label(f"Tier.{d['tier']}")] + [tag_label(term_fqn(g), "Glossary") for g in d.get("glossary", [])]
+    patch_entity("dashboards", dash, [
+        {"op": "add", "path": "/owners", "value": [team_ref(d["owner"])]},
+        {"op": "add", "path": "/tags", "value": tags},
+        {"op": "add", "path": "/domains", "value": [{"id": dom["id"], "type": "domain"}]}])
+    for ch in dash["charts"]:
+        chart = get(f"/charts/{ch['id']}?fields=owners,domains")
+        patch_entity("charts", chart, [
+            {"op": "add", "path": "/owners", "value": [team_ref(d["owner"])]},
+            {"op": "add", "path": "/domains", "value": [{"id": dom["id"], "type": "domain"}]}])
+    if d.get("data_product"):
+        call("PUT", f"/dataProducts/{d['data_product']}/assets/add",
+             {"assets": [{"id": dash["id"], "type": "dashboard"}]})
+    print(f"dashboard: {d['displayName']} ({len(dash['charts'])} Metabase charts) governed")
+
+
+# ------------------------------------------------------------------ access control
+def admin_headers() -> dict:
+    """Creating users needs an admin principal (the ingestion bot is not one): log in as the local admin."""
+    email = os.environ.get("OM_ADMIN_EMAIL", "admin@open-metadata.org")
+    pw = base64.b64encode(os.environ.get("OM_ADMIN_PASSWORD", "admin").encode()).decode()
+    r = requests.post(f"{OM}/users/login", json={"email": email, "password": pw})
+    r.raise_for_status()
+    return {"Authorization": f"Bearer {r.json()['accessToken']}"}
+
+
+def apply_access_control():
+    for pol in CFG.get("policies", []):
+        call("PUT", "/policies", {"name": pol["name"], "displayName": pol["displayName"],
+                                  "description": pol["description"], "rules": pol["rules"]})
+    for role in CFG.get("roles", []):
+        call("PUT", "/roles", {"name": role["name"], "displayName": role["displayName"],
+                               "description": role["description"], "policies": role["policies"]})
+    for u in CFG.get("demo_users", []):
+        existing = get(f"/users/name/{u['name']}?fields=teams,roles")
+        team_id = get(f"/teams/name/{u['team']}")["id"]
+        role_id = get(f"/roles/name/{u['role']}")["id"]
+        if not existing:
+            pw = secrets.token_urlsafe(12) + "A1!"  # never used: demo personas don't log in
+            r = requests.post(f"{OM}/users", headers=admin_headers(), json={
+                "name": u["name"], "displayName": u["displayName"], "email": f"{u['name']}@example.com",
+                "teams": [team_id], "roles": [role_id],
+                "createPasswordType": "ADMIN_CREATE", "password": pw, "confirmPassword": pw})
+            if r.status_code >= 400:
+                sys.exit(f"create user {u['name']}: {r.status_code} {r.text[:300]}")
+        else:
+            requests.patch(f"{OM}/users/{existing['id']}", headers={**admin_headers(),
+                           "Content-Type": "application/json-patch+json"}, json=[
+                {"op": "add", "path": "/teams", "value": [{"id": team_id, "type": "team"}]},
+                {"op": "add", "path": "/roles", "value": [{"id": role_id, "type": "role"}]}]).raise_for_status()
+    print(f"access control: {len(CFG.get('policies', []))} policy, {len(CFG.get('roles', []))} role, "
+          f"{len(CFG.get('demo_users', []))} demo users")
 
 
 if __name__ == "__main__":
@@ -201,4 +244,5 @@ if __name__ == "__main__":
     apply_columns()
     apply_data_products()
     apply_dashboard()
+    apply_access_control()
     print("Governance applied.")

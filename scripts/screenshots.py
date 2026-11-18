@@ -23,9 +23,13 @@ PAGES = {
     "07_data_quality_overview": "/data-quality/test-cases",
     "08_domain": "/domain/SupplyChain/assets",
     "09_data_product": "/dataProduct/SupplyChainKPIs/assets",
-    "10_dashboard": "/dashboard/supply_chain_bi.supply_chain_performance",
+    "10_dashboard": "/dashboard/metabase_bi.2",
     "11_column_profile": f"/table/{T}.sap_erp.mard/profiler/column-profile",
+    "12_data_contract": f"/table/{T}.analytics_marts.fct_otif/contract",
+    "13_access_policy": "/settings/access/policies/RestrictedDataAccess",
+    "14_lineage_to_dashboard": "/dashboard/metabase_bi.2/lineage",
 }
+METABASE = {"15_metabase_dashboard": "/dashboard/2"}
 
 
 def main(only):
@@ -53,6 +57,19 @@ def main(only):
                 page.wait_for_timeout(1500)
             page.screenshot(path=OUT / f"{name}.png")
             print("saved", name)
+        if not only or any(n in only for n in METABASE):
+            page = b.new_page(viewport={"width": 1800, "height": 1050})
+            page.goto("http://localhost:3000/auth/login")
+            page.fill("input[name=username]", os.environ.get("MB_ADMIN_EMAIL", "admin@example.com"))
+            page.fill("input[name=password]", os.environ.get("MB_ADMIN_PASSWORD", "Governance-demo-2026"))
+            page.keyboard.press("Enter")
+            page.wait_for_url(lambda u: "login" not in u, timeout=30000)
+            for name, path in METABASE.items():
+                page.goto("http://localhost:3000" + path)
+                page.wait_for_load_state("networkidle")
+                page.wait_for_timeout(5000)
+                page.screenshot(path=OUT / f"{name}.png")
+                print("saved", name)
         b.close()
 
 

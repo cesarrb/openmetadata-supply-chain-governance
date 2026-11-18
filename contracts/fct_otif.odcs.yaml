@@ -1,0 +1,203 @@
+---
+apiVersion: "v3.1.0"
+kind: "DataContract"
+id: "889784a0-317e-4453-ac04-b1ae2f57d31e"
+name: "fct_otif_contract"
+version: "0.2"
+status: "active"
+tags:
+- "terms-of-use"
+description:
+  purpose: "Line-level OTIF for standard sales orders. Consumers (S&OP review, plant\
+    \ managers) can rely on these columns and definitions; breaking changes require\
+    \ a new contract version and 30 days' notice."
+authoritativeDefinitions: []
+schema:
+- name: "fct_otif_contract"
+  physicalType: "table"
+  tags: []
+  authoritativeDefinitions: []
+  primaryKey: false
+  primaryKeyPosition: -1
+  logicalType: "object"
+  required: false
+  unique: false
+  partitionKeyPosition: -1
+  transformSourceObjects: []
+  examples: []
+  properties:
+  - name: "sales_order_id"
+    physicalName: "sales_order_id"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "sales_order_item"
+    physicalName: "sales_order_item"
+    physicalType: "INT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "integer"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "plant_id"
+    physicalName: "plant_id"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "requested_delivery_date"
+    physicalName: "requested_delivery_date"
+    physicalType: "DATE"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "date"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality:
+    - id: "fct_otif_requested_date_not_null"
+      type: "library"
+      name: "fct_otif_requested_date_not_null"
+      description: "Without a requested date the on-time check is impossible"
+      metric: "nullValues"
+      column: "requested_delivery_date"
+      mustBe: 0.0
+      validValues: []
+      authoritativeDefinitions: []
+      tags: []
+  - name: "actual_goods_issue_date"
+    physicalName: "actual_goods_issue_date"
+    physicalType: "DATE"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "date"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "is_on_time"
+    physicalName: "is_on_time"
+    physicalType: "BOOLEAN"
+    description: "Goods issue date <= customer requested delivery date."
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "boolean"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "is_in_full"
+    physicalName: "is_in_full"
+    physicalType: "BOOLEAN"
+    description: "Delivered quantity >= ordered quantity."
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "boolean"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "is_otif"
+    physicalName: "is_otif"
+    physicalType: "BOOLEAN"
+    description: "True when the line is both on time and in full."
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "boolean"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  quality: []
+quality:
+- id: "fct_otif_row_count"
+  type: "library"
+  name: "fct_otif_row_count"
+  description: "An almost empty OTIF fact means the delivery feed broke"
+  metric: "rowCount"
+  mustBeGreaterOrEqualTo: 100.0
+  validValues: []
+  authoritativeDefinitions: []
+  tags: []
+support: []
+team:
+- username: "supply-chain-planning"
+  name: "Supply Chain Planning"
+  role: "owner"
+roles:
+- role: "classification-Confidentiality.Internal"
+  description: "Data classification: Confidentiality.Internal"
+  firstLevelApprovers: []
+  secondLevelApprovers: []
+slaProperties:
+- property: "freshness"
+  value: "1"
+  unit: "day"
+- property: "latency"
+  value: "1"
+  unit: "day"
+- property: "retention"
+  value: "3"
+  unit: "year"
+- property: "availabilityTime"
+  value: "06:00"
+  valueExt: "GMT+01:00 (Europe/Paris)"
+servers: []
+customProperties: []
+contractCreatedTs: 1795028392734

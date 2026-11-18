@@ -111,21 +111,24 @@ def build():
     for i in range(1, 1201):
         vbeln = f"10{i:08d}"
         kunnr = rng.choice(kna1)[0]
-        erdat = rand_date(START, END - dt.timedelta(days=20))
+        # Orders stop on 31 Aug, so every requested date falls by 30 Sep and every line is shipped
+        # by END: no partial last month and no survivorship bias (late deliveries silently missing).
+        erdat = rand_date(START, dt.date(2026, 8, 31))
         vdatu = erdat + dt.timedelta(days=rng.randint(5, 30))  # requested delivery date
-        vbak.append((vbeln, kunnr, erdat, vdatu, rng.choice(["OR", "OR", "OR", "RE"])))
+        auart = rng.choice(["OR", "OR", "OR", "RE"])
+        vbak.append((vbeln, kunnr, erdat, vdatu, auart))
         for pos in range(1, rng.randint(2, 4)):
             matnr, werks = rng.choice(marc_keys)
             qty = rng.randint(1, 40)
             vbap.append((vbeln, pos * 10, matnr, werks, qty, round(price[matnr] * 1.35, 2)))
+            if auart != "OR":
+                continue  # returns (RE) are not shipped outbound
             # Delivery behaviour: ~78 % on time, ~88 % in full -> realistic OTIF ~70 %
             dlv_n += 1
             dlv = f"80{dlv_n:08d}"
             late = rng.random() > 0.78
             actual = vdatu + dt.timedelta(days=rng.randint(1, 12) if late else -rng.randint(0, 3))
             delivered = qty if rng.random() < 0.88 else max(0, qty - rng.randint(1, qty))
-            if actual > END:
-                continue  # not yet delivered
             if rng.random() < 0.01:
                 actual = None  # injected defect: goods issue posted without date
             likp.append((dlv, vbeln, werks, actual))
@@ -135,7 +138,7 @@ def build():
     mard = []
     for matnr, werks in marc_keys:
         for lgort in ("0001", "0002"):
-            labst = rng.randint(0, 600)
+            labst = int(rng.expovariate(1 / 70))  # skewed: most items healthy, some below safety stock
             if rng.random() < 0.01:
                 labst = -rng.randint(1, 20)  # injected defect: negative unrestricted stock
             mard.append((matnr, werks, lgort, labst))
@@ -144,14 +147,19 @@ def build():
     plan = []
     actual_by = {}
     so_date = {h[0]: h[2] for h in vbak}
+    so_type = {h[0]: h[4] for h in vbak}
     for v in vbap:
+        if so_type[v[0]] != "OR":
+            continue  # the plan forecasts customer demand, i.e. standard orders only
         m = so_date[v[0]].replace(day=1)
         actual_by[(v[2], v[3], m)] = actual_by.get((v[2], v[3], m), 0) + v[4]
     months = sorted({k[2] for k in actual_by})
     for matnr, werks in marc_keys:
         for m in months:
             a = actual_by.get((matnr, werks, m), 0)
-            planned = max(0, round(a * rng.uniform(.75, 1.3) + rng.randint(-3, 6)))
+            # Unbiased forecast error (about 30 % on average at material x plant x month, a realistic
+            # level for spare parts); small plans where no order arrived.
+            planned = max(0, round(a * rng.uniform(.5, 1.5) + rng.randint(-3, 3))) if a else rng.choice([0, 0, 0, 1, 2])
             plan.append((matnr, werks, m, planned, "V" + m.strftime("%Y%m")))
 
     return dict(mara=mara, marc=marc, lfa1=lfa1, kna1=kna1, ekko=ekko, ekpo=ekpo,

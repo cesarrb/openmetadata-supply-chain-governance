@@ -1,0 +1,187 @@
+---
+apiVersion: "v3.1.0"
+kind: "DataContract"
+id: "6d0fb0e4-5f56-4e48-a174-c45d8ad58bea"
+name: "fct_plan_vs_actual_contract"
+version: "0.4"
+status: "active"
+tags:
+- "terms-of-use"
+description:
+  purpose: "Monthly consensus plan vs. actual order intake with forecast accuracy\
+    \ per material and plant."
+authoritativeDefinitions: []
+schema:
+- name: "fct_plan_vs_actual_contract"
+  physicalType: "table"
+  tags: []
+  authoritativeDefinitions: []
+  primaryKey: false
+  primaryKeyPosition: -1
+  logicalType: "object"
+  required: false
+  unique: false
+  partitionKeyPosition: -1
+  transformSourceObjects: []
+  examples: []
+  properties:
+  - name: "material_id"
+    physicalName: "material_id"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "plant_id"
+    physicalName: "plant_id"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "plan_month"
+    physicalName: "plan_month"
+    physicalType: "DATE"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "date"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "planned_qty"
+    physicalName: "planned_qty"
+    physicalType: "INT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "integer"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "actual_qty"
+    physicalName: "actual_qty"
+    physicalType: "BIGINT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "long"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "variance_qty"
+    physicalName: "variance_qty"
+    physicalType: "BIGINT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "long"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "forecast_accuracy"
+    physicalName: "forecast_accuracy"
+    physicalType: "DOUBLE"
+    description: "1 - |actual - plan| / actual, floored at 0. Null when there is no\
+      \ actual demand."
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "double"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality:
+    - type: "custom"
+      name: "forecast_accuracy_between_0_and_1"
+      description: "Accuracy is a ratio between 0 and 1"
+      column: "forecast_accuracy"
+      engine: "openmetadata"
+      implementation: "{\"name\":\"forecast_accuracy_between_0_and_1\",\"testDefinition\"\
+        :\"columnValuesToBeBetween\",\"parameterValues\":[{\"name\":\"minValue\",\"\
+        value\":\"0\"},{\"name\":\"maxValue\",\"value\":\"1\"}]}"
+      validValues: []
+      authoritativeDefinitions: []
+      tags: []
+  quality: []
+quality:
+- type: "custom"
+  name: "assert_forecast_accuracy_not_degenerate"
+  engine: "openmetadata"
+  implementation: "{\"name\":\"assert_forecast_accuracy_not_degenerate\",\"testDefinition\"\
+    :\"assert_forecast_accuracy_not_degenerate_table\",\"parameterValues\":[]}"
+  validValues: []
+  authoritativeDefinitions: []
+  tags: []
+support: []
+team:
+- username: "supply-chain-planning"
+  name: "Supply Chain Planning"
+  role: "owner"
+roles:
+- role: "classification-Confidentiality.Internal"
+  description: "Data classification: Confidentiality.Internal"
+  firstLevelApprovers: []
+  secondLevelApprovers: []
+slaProperties:
+- property: "freshness"
+  value: "1"
+  unit: "day"
+- property: "latency"
+  value: "1"
+  unit: "day"
+- property: "retention"
+  value: "3"
+  unit: "year"
+- property: "availabilityTime"
+  value: "06:00"
+  valueExt: "GMT+01:00 (Europe/Paris)"
+servers: []
+customProperties: []
+contractCreatedTs: 1795028445517

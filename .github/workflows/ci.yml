@@ -1,0 +1,61 @@
+# Governance CI: every pull request rebuilds the warehouse from scratch, runs the dbt tests,
+# checks that the three injected defects are still detected, and validates governance-as-code.
+# (OpenMetadata itself is not started here; that part runs locally with `make all`.)
+name: governance-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: password
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Validate governance references (static)
+        run: uv run python scripts/validate_governance.py
+
+      - name: Create ERP database and roles
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f data/init_erp.sql
+
+      - name: Generate synthetic SAP-style data
+        run: uv run python data/generate_sap_data.py
+
+      - name: dbt run + docs
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: .
+        run: |
+          uv run dbt run
+          uv run dbt docs generate
+
+      - name: dbt test (failures are evaluated in the next step)
+        working-directory: dbt
+        env:
+          DBT_PROFILES_DIR: .
+        run: uv run dbt test || true
+
+      - name: Gate - injected defects detected, nothing else broken
+        run: uv run python scripts/check_dbt_results.py
+
+      - name: Validate governance against the real columns (dbt catalog)
+        run: uv run python scripts/validate_governance.py

@@ -1,0 +1,28 @@
+# BI ingestion: Metabase dashboards and charts, with lineage parsed from each question's SQL
+# back to the tables of the erp_postgres service.
+source:
+  type: metabase
+  serviceName: metabase_bi
+  serviceConnection:
+    config:
+      type: Metabase
+      hostPort: http://metabase:3000
+      username: admin@example.com
+      password: Governance-demo-2026
+  sourceConfig:
+    config:
+      type: DashboardMetadata
+      includeOwners: false
+      markDeletedDashboards: true
+      lineageInformation:
+        dbServicePrefixes: ["erp_postgres"]
+sink:
+  type: metadata-rest
+  config: {}
+workflowConfig:
+  loggerLevel: INFO
+  openMetadataServerConfig:
+    hostPort: http://openmetadata_server:8585/api
+    authProvider: openmetadata
+    securityConfig:
+      jwtToken: "${OM_JWT}"

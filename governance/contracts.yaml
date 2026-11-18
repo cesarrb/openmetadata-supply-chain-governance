@@ -1,0 +1,43 @@
+# Data contracts: the promise a data producer makes to its consumers.
+# One contract per certified KPI table: guaranteed columns, metadata rules (semantics),
+# quality expectations (linked test cases), SLA and security classification.
+# Applied with scripts/apply_contracts.py, validated by OpenMetadata, and exported in the
+# Open Data Contract Standard (ODCS) to contracts/*.odcs.yaml.
+
+defaults:
+  owner: supply-chain-planning
+  reviewer: data-governance-office
+  status: Approved
+  sla:
+    refreshFrequency: {interval: 1, unit: day}
+    maxLatency: {value: 1, unit: day}
+    availabilityTime: "06:00"
+    timezone: "GMT+01:00 (Europe/Paris)"   # same offset as Zurich; OpenMetadata accepts a fixed list
+    retention: {period: 3, unit: year}
+  # Metadata rules every certified table must satisfy (JsonLogic over the table entity).
+  semantics:
+    - {name: Has owner, description: "A business owner team is assigned.", rule: '{"!!": {"var": "owners"}}'}
+    - {name: Has description, description: "The table is documented.", rule: '{"!!": {"var": "description"}}'}
+    - {name: Has domain, description: "The table belongs to a domain.", rule: '{"!!": {"var": "domains"}}'}
+
+contracts:
+  analytics_marts.fct_otif:
+    description: >
+      Line-level OTIF for standard sales orders. Consumers (S&OP review, plant managers) can rely on
+      these columns and definitions; breaking changes require a new contract version and 30 days' notice.
+    columns: [sales_order_id, sales_order_item, plant_id, requested_delivery_date, actual_goods_issue_date,
+              is_on_time, is_in_full, is_otif]
+    termsOfUse: Internal reporting only. Customer identifiers must not be exported outside the company.
+  analytics_marts.rpt_otif_monthly:
+    description: Monthly OTIF, on-time and in-full rates per plant. Source of the Supply Chain Performance dashboard.
+    columns: [measure_month, plant_id, order_lines, on_time_rate, in_full_rate, otif_rate]
+    termsOfUse: Internal reporting. Published figures must quote this table and its refresh date.
+  analytics_marts.fct_plan_vs_actual:
+    description: Monthly consensus plan vs. actual order intake with forecast accuracy per material and plant.
+    columns: [material_id, plant_id, plan_month, planned_qty, actual_qty, variance_qty, forecast_accuracy]
+    termsOfUse: Internal. Used for S&OP and forecast-accuracy targets.
+  analytics_marts.fct_inventory_position:
+    description: Stock quantity and value per material and plant, safety-stock breaches and Days of Inventory.
+    columns: [material_plant_key, material_id, plant_id, stock_qty, stock_value_eur, safety_stock_qty,
+              below_safety_stock, days_of_inventory]
+    termsOfUse: Confidential (contains inventory value). Domain members only.

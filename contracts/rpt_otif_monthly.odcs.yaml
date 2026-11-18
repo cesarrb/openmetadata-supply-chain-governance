@@ -1,0 +1,189 @@
+---
+apiVersion: "v3.1.0"
+kind: "DataContract"
+id: "dff9a75a-a364-474e-b776-daea6d7d8e0e"
+name: "rpt_otif_monthly_contract"
+version: "0.2"
+status: "active"
+tags:
+- "terms-of-use"
+description:
+  purpose: "Monthly OTIF, on-time and in-full rates per plant. Source of the Supply\
+    \ Chain Performance dashboard."
+authoritativeDefinitions: []
+schema:
+- name: "rpt_otif_monthly_contract"
+  physicalType: "table"
+  tags: []
+  authoritativeDefinitions: []
+  primaryKey: false
+  primaryKeyPosition: -1
+  logicalType: "object"
+  required: false
+  unique: false
+  partitionKeyPosition: -1
+  transformSourceObjects: []
+  examples: []
+  properties:
+  - name: "measure_month"
+    physicalName: "measure_month"
+    physicalType: "DATE"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "date"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "plant_id"
+    physicalName: "plant_id"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "order_lines"
+    physicalName: "order_lines"
+    physicalType: "BIGINT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "long"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "on_time_rate"
+    physicalName: "on_time_rate"
+    physicalType: "DOUBLE"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "double"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "in_full_rate"
+    physicalName: "in_full_rate"
+    physicalType: "DOUBLE"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "double"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "otif_rate"
+    physicalName: "otif_rate"
+    physicalType: "DOUBLE"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "double"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality:
+    - type: "custom"
+      name: "not_null_rpt_otif_monthly_otif_rate"
+      column: "otif_rate"
+      engine: "openmetadata"
+      implementation: "{\"name\":\"not_null_rpt_otif_monthly_otif_rate\",\"testDefinition\"\
+        :\"not_null\",\"parameterValues\":[{\"name\":\"not_null\",\"value\":\"\"}]}"
+      validValues: []
+      authoritativeDefinitions: []
+      tags: []
+    - type: "custom"
+      name: "otif_rate_between_0_and_1"
+      description: "KPI outside 0-100 % means a broken calculation"
+      column: "otif_rate"
+      engine: "openmetadata"
+      implementation: "{\"name\":\"otif_rate_between_0_and_1\",\"testDefinition\"\
+        :\"columnValuesToBeBetween\",\"parameterValues\":[{\"name\":\"minValue\",\"\
+        value\":\"0\"},{\"name\":\"maxValue\",\"value\":\"1\"}]}"
+      validValues: []
+      authoritativeDefinitions: []
+      tags: []
+    - id: "otif_rate_not_null"
+      type: "library"
+      name: "otif_rate_not_null"
+      description: "Every plant-month must have an OTIF value"
+      metric: "nullValues"
+      column: "otif_rate"
+      mustBe: 0.0
+      validValues: []
+      authoritativeDefinitions: []
+      tags: []
+  quality: []
+quality:
+- type: "custom"
+  name: "assert_otif_rate_between_0_and_1"
+  engine: "openmetadata"
+  implementation: "{\"name\":\"assert_otif_rate_between_0_and_1\",\"testDefinition\"\
+    :\"assert_otif_rate_between_0_and_1_table\",\"parameterValues\":[]}"
+  validValues: []
+  authoritativeDefinitions: []
+  tags: []
+support: []
+team:
+- username: "supply-chain-planning"
+  name: "Supply Chain Planning"
+  role: "owner"
+roles:
+- role: "classification-Confidentiality.Internal"
+  description: "Data classification: Confidentiality.Internal"
+  firstLevelApprovers: []
+  secondLevelApprovers: []
+slaProperties:
+- property: "freshness"
+  value: "1"
+  unit: "day"
+- property: "latency"
+  value: "1"
+  unit: "day"
+- property: "retention"
+  value: "3"
+  unit: "year"
+- property: "availabilityTime"
+  value: "06:00"
+  valueExt: "GMT+01:00 (Europe/Paris)"
+servers: []
+customProperties: []
+contractCreatedTs: 1795028445182

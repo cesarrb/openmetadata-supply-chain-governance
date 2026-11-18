@@ -1,0 +1,24 @@
+# BI layer: Metabase (open source) on the same Docker network as OpenMetadata.
+# Its application database lives in the shared Postgres container (database "metabase").
+services:
+  metabase:
+    container_name: metabase
+    image: metabase/metabase:v0.65.4
+    restart: "no"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: openmetadata_postgresql
+      MB_DB_PORT: 5432
+      MB_DB_DBNAME: metabase
+      MB_DB_USER: metabase
+      MB_DB_PASS: metabase
+      JAVA_OPTS: "-Xmx1g"
+      MB_ANON_TRACKING_ENABLED: "false"
+      MB_CHECK_FOR_UPDATES: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks: [app_net]
+networks:
+  app_net:
+    name: docker_app_net
+    external: true

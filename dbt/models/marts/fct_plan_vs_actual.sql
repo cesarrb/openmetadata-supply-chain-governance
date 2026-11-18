@@ -17,7 +17,7 @@ select
     coalesce(a.actual_qty, 0)                           as actual_qty,
     coalesce(a.actual_qty, 0) - p.planned_qty           as variance_qty,
     case when coalesce(a.actual_qty, 0) = 0 then null
-         else greatest(0, 1 - abs(a.actual_qty - p.planned_qty) / a.actual_qty)
+         else greatest(0, 1 - abs(a.actual_qty - p.planned_qty)::numeric / a.actual_qty)  -- numeric: avoid integer division
     end::double precision                               as forecast_accuracy
 from {{ ref('stg_demand_plan') }} p
 left join actual a using (material_id, plant_id, plan_month)

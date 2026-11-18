@@ -1,0 +1,192 @@
+---
+apiVersion: "v3.1.0"
+kind: "DataContract"
+id: "ec75650c-3fcc-443d-a232-49724a832ba5"
+name: "fct_inventory_position_contract"
+version: "0.2"
+status: "active"
+tags:
+- "terms-of-use"
+description:
+  purpose: "Stock quantity and value per material and plant, safety-stock breaches\
+    \ and Days of Inventory."
+authoritativeDefinitions: []
+schema:
+- name: "fct_inventory_position_contract"
+  physicalType: "table"
+  tags: []
+  authoritativeDefinitions: []
+  primaryKey: false
+  primaryKeyPosition: -1
+  logicalType: "object"
+  required: false
+  unique: false
+  partitionKeyPosition: -1
+  transformSourceObjects: []
+  examples: []
+  properties:
+  - name: "material_plant_key"
+    physicalName: "material_plant_key"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality:
+    - id: "inventory_key_unique"
+      type: "library"
+      name: "inventory_key_unique"
+      description: "One inventory position per material and plant"
+      metric: "duplicateValues"
+      column: "material_plant_key"
+      mustBe: 0.0
+      validValues: []
+      authoritativeDefinitions: []
+      tags: []
+  - name: "material_id"
+    physicalName: "material_id"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "plant_id"
+    physicalName: "plant_id"
+    physicalType: "TEXT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "text"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "stock_qty"
+    physicalName: "stock_qty"
+    physicalType: "BIGINT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "long"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "stock_value_eur"
+    physicalName: "stock_value_eur"
+    physicalType: "NUMERIC"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "decimal"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "safety_stock_qty"
+    physicalName: "safety_stock_qty"
+    physicalType: "INT"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "integer"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "below_safety_stock"
+    physicalName: "below_safety_stock"
+    physicalType: "BOOLEAN"
+    description: ""
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "boolean"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  - name: "days_of_inventory"
+    physicalName: "days_of_inventory"
+    physicalType: "NUMERIC"
+    description: "Stock / average daily demand of the last 90 days."
+    tags: []
+    authoritativeDefinitions: []
+    primaryKey: false
+    primaryKeyPosition: -1
+    logicalType: "decimal"
+    required: false
+    unique: false
+    partitionKeyPosition: -1
+    transformSourceObjects: []
+    examples: []
+    properties: []
+    quality: []
+  quality: []
+support: []
+team:
+- username: "supply-chain-planning"
+  name: "Supply Chain Planning"
+  role: "owner"
+roles:
+- role: "classification-Confidentiality.Confidential"
+  description: "Data classification: Confidentiality.Confidential"
+  firstLevelApprovers: []
+  secondLevelApprovers: []
+slaProperties:
+- property: "freshness"
+  value: "1"
+  unit: "day"
+- property: "latency"
+  value: "1"
+  unit: "day"
+- property: "retention"
+  value: "3"
+  unit: "year"
+- property: "availabilityTime"
+  value: "06:00"
+  valueExt: "GMT+01:00 (Europe/Paris)"
+servers: []
+customProperties: []
+contractCreatedTs: 1795028445860

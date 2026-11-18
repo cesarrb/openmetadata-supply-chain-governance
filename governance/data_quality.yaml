@@ -19,3 +19,6 @@ tests:
     - {name: forecast_accuracy_between_0_and_1, column: forecast_accuracy, definition: columnValuesToBeBetween, params: {minValue: 0, maxValue: 1}, why: "Accuracy is a ratio between 0 and 1"}
   analytics_marts.fct_inventory_position:
     - {name: inventory_key_unique, column: material_plant_key, definition: columnValuesToBeUnique, why: "One inventory position per material and plant"}
+  analytics_marts.fct_otif:
+    - {name: fct_otif_row_count, definition: tableRowCountToBeBetween, params: {minValue: 100}, why: "An almost empty OTIF fact means the delivery feed broke"}
+    - {name: fct_otif_requested_date_not_null, column: requested_delivery_date, definition: columnValuesToBeNotNull, why: "Without a requested date the on-time check is impossible"}

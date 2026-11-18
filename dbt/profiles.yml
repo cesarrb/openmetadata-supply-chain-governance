@@ -4,7 +4,7 @@ supply_chain_analytics:
     dev:
       type: postgres
       host: localhost
-      port: 5432
+      port: "{{ env_var('ERP_PORT', '5432') | int }}"
       user: "{{ env_var('ERP_USER', 'erp_admin') }}"
       password: "{{ env_var('ERP_PASSWORD', 'erp_admin') }}"
       dbname: erp

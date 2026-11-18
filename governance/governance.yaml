@@ -138,7 +138,12 @@ assets:
 
 # Column-level tags (PII the auto-classifier missed, plus glossary links on key columns).
 columns:
-  sap_erp.lfa1.contact_phone:   {tags: [PII.Sensitive]}
+  sap_erp.lfa1.contact_phone:   {tags: [PII.Sensitive]}       # missed by the auto-classifier
+  # False positives of the auto-classifier (business dates read as dates of birth): steward rejects them.
+  sap_erp.ekko.bedat:           {reject_auto: true}
+  sap_erp.ekpo.eindt:           {reject_auto: true}
+  sap_erp.vbak.erdat:           {reject_auto: true}
+  sap_erp.demand_plan.plan_month: {reject_auto: true}
   sap_erp.lfa1.stceg:           {tags: [Confidentiality.Confidential]}
   sap_erp.vbak.vdatu:           {glossary: [RequestedDeliveryDate]}
   sap_erp.likp.wadat_ist:       {glossary: [GoodsIssue]}
@@ -152,18 +157,40 @@ columns:
   analytics_marts.fct_inventory_position.days_of_inventory: {glossary: [DaysOfInventory]}
   analytics_marts.fct_inventory_position.safety_stock_qty:  {glossary: [SafetyStock]}
 
-# BI layer: the dashboard is registered through the API (custom dashboard service) so the
-# lineage runs from the ERP table all the way to the chart the business looks at.
+# BI layer: the Metabase dashboard is ingested by OpenMetadata's native connector (lineage comes
+# from each question's SQL). Governance adds ownership, domain, tier and glossary on top.
 dashboard:
-  service: supply_chain_bi
-  name: supply_chain_performance
+  service: metabase_bi
   displayName: Supply Chain Performance
   owner: supply-chain-planning
   domain: SupplyChain
   tier: Tier1
   glossary: [OTIF, PlanVsActual, DaysOfInventory]
-  description: Monthly OTIF by plant, Plan vs Actual and inventory health. Used in the monthly S&OP review.
-  charts:
-    - {name: otif_by_plant, displayName: OTIF by plant (monthly), chartType: Line, source: analytics_marts.rpt_otif_monthly, description: "OTIF, on-time and in-full rate per plant and month. Target 95 %."}
-    - {name: plan_vs_actual, displayName: Plan vs Actual and forecast accuracy, chartType: Bar, source: analytics_marts.fct_plan_vs_actual, description: "Consensus plan vs. actual order intake and forecast accuracy by material group."}
-    - {name: inventory_health, displayName: Days of Inventory and safety-stock breaches, chartType: Table, source: analytics_marts.fct_inventory_position, description: "Materials below safety stock and with excess Days of Inventory."}
+  data_product: SupplyChainKPIs
+  legacy_services: [supply_chain_bi]   # earlier API-registered placeholder, removed on apply
+
+# Access control: Restricted data (tables holding personal data) is readable only by its owner
+# team and the Data Governance Office. Everyone else still finds the table in the catalogue
+# (metadata, lineage, glossary) but cannot open sample data, profiles or queries.
+policies:
+  - name: RestrictedDataAccess
+    displayName: Restricted data - owners only
+    description: Deny row-level views of Restricted tables to anyone who is not the owner team or the DGO.
+    rules:
+      - name: deny-restricted-rows-to-non-owners
+        description: Sample data, data profile and query history of Restricted tables stay with the owners.
+        effect: deny
+        resources: [table]
+        operations: [ViewSampleData, ViewDataProfile, ViewQueries]
+        condition: "matchAnyTag('Confidentiality.Restricted') && !isOwner() && !inAnyTeam('data-governance-office')"
+
+roles:
+  - name: SupplyChainAnalyst
+    displayName: Supply Chain Analyst
+    description: Business analyst. Reads the catalogue and certified data; Restricted data is owner-only.
+    policies: [DataConsumerPolicy, RestrictedDataAccess]
+
+# Demo personas used to prove the policy works (local accounts, no real people).
+demo_users:
+  - {name: sc.analyst, displayName: Supply Chain Analyst (demo), team: supply-chain-planning, role: SupplyChainAnalyst}
+  - {name: procurement.steward, displayName: Procurement Data Steward (demo), team: procurement, role: SupplyChainAnalyst}
