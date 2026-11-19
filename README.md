@@ -8,8 +8,8 @@ with steward review, business glossary, data-quality tests, data contracts, acce
 measured governance scorecard**, built on [OpenMetadata](https://open-metadata.org) 2.0.7, dbt and
 Metabase, all kept as code and checked in CI.
 
-**Live demo (no install needed):** [dbt docs with models, columns, tests and the lineage graph](https://cesarrb.github.io/openmetadata-supply-chain-governance/),
-rebuilt by CI on every push. Click the lineage icon (bottom right) on any model, e.g. `fct_otif`.
+**Live demo (no install needed):** [dbt docs with models, columns, tests and the lineage graph](https://cesarrb.github.io/openmetadata-supply-chain-governance/#!/model/model.supply_chain_analytics.fct_otif?g_v=1),
+rebuilt by CI on every push. The link opens the OTIF fact table with its lineage back to the SAP tables.
 The full OpenMetadata catalogue runs locally with Docker (see [Run it](#run-it)) and is shown in the
 [screenshots](#screenshots).
 
