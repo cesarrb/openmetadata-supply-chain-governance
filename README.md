@@ -8,6 +8,11 @@ with steward review, business glossary, data-quality tests, data contracts, acce
 measured governance scorecard**, built on [OpenMetadata](https://open-metadata.org) 2.0.7, dbt and
 Metabase, all kept as code and checked in CI.
 
+**Live demo (no install needed):** [dbt docs with models, columns, tests and the lineage graph](https://cesarrb.github.io/openmetadata-supply-chain-governance/),
+rebuilt by CI on every push. Click the lineage icon (bottom right) on any model, e.g. `fct_otif`.
+The full OpenMetadata catalogue runs locally with Docker (see [Run it](#run-it)) and is shown in the
+[screenshots](#screenshots).
+
 > All data is synthetic (fixed random seed). Table names follow SAP ECC conventions
 > (MARA, MARC, LFA1, KNA1, EKKO/EKPO, VBAK/VBAP, LIKP/LIPS, MARD) so the catalogue looks like
 > a real ERP landscape.
