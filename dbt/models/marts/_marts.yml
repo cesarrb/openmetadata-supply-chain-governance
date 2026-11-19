@@ -1,6 +1,12 @@
 version: 2
 models:
   - name: dim_material
+    config:
+      meta:  # mirrors governance/governance.yaml; CI fails if the two disagree
+        owner_team: supply-chain-planning
+        tier: Tier1
+        confidentiality: Internal
+        glossary_terms: Material Master
     description: Material x plant dimension used by every supply-chain KPI. One row per material and plant.
     columns:
       - name: material_plant_key
@@ -30,104 +36,187 @@ models:
         description: "{{ doc('is_active') }}"
 
   - name: fct_otif
+    config:
+      meta:  # mirrors governance/governance.yaml; CI fails if the two disagree
+        owner_team: supply-chain-planning
+        tier: Tier1
+        confidentiality: Internal
+        glossary_terms: OTIF (On Time In Full)
+        certification: Gold
+        data_contract: governance/contracts.yaml (validated in OpenMetadata)
+      contract: {enforced: true}  # dbt refuses to build if columns or types drift
+    constraints:
+      - {type: primary_key, columns: [sales_order_id, sales_order_item]}
     description: >
       OTIF (On Time In Full) at sales-order-line level. A line is OTIF when it is
       shipped on or before the requested delivery date AND the full quantity is delivered.
       Only delivered standard orders (type OR) are measured; returns are excluded.
     columns:
       - name: sales_order_id
+        data_type: text
         description: "{{ doc('sales_order_id') }}"
       - name: sales_order_item
+        data_type: integer
         description: "{{ doc('sales_order_item') }}"
       - name: customer_id
+        data_type: text
         description: "{{ doc('customer_id') }}"
       - name: customer_abc_class
+        data_type: text
         description: "{{ doc('customer_abc_class') }} Lets OTIF be analysed for key accounts."
       - name: plant_id
+        data_type: text
         description: Delivering plant (WERKS).
       - name: material_id
+        data_type: text
         description: "{{ doc('material_id') }}"
       - name: order_date
+        data_type: date
         description: Sales order creation date (ERDAT).
       - name: requested_delivery_date
+        data_type: date
         description: Delivery date requested by the customer (VDATU). The on-time deadline.
       - name: actual_goods_issue_date
+        data_type: date
         description: >
           Latest goods issue date across the deliveries of the line. Empty when SAP did not record
           it (a known source defect, caught by a data-quality test).
       - name: measure_month
+        data_type: date
         description: First day of the month of the requested delivery date; OTIF is reported in this month.
       - name: ordered_qty
+        data_type: integer
         description: "{{ doc('ordered_qty') }}"
       - name: delivered_qty
+        data_type: bigint
         description: Total quantity delivered for the line, across all its deliveries.
       - name: is_on_time
+        data_type: boolean
         description: Goods issue date <= customer requested delivery date.
       - name: is_in_full
+        data_type: boolean
         description: Delivered quantity >= ordered quantity.
       - name: is_otif
+        data_type: boolean
         description: True when the line is both on time and in full.
 
   - name: fct_plan_vs_actual
+    config:
+      meta:  # mirrors governance/governance.yaml; CI fails if the two disagree
+        owner_team: supply-chain-planning
+        tier: Tier1
+        confidentiality: Internal
+        glossary_terms: Plan vs Actual, Forecast Accuracy
+        certification: Gold
+        data_contract: governance/contracts.yaml (validated in OpenMetadata)
+      contract: {enforced: true}  # dbt refuses to build if columns or types drift
+    constraints:
+      - {type: primary_key, columns: [material_id, plant_id, plan_month]}
     description: >
       Monthly Plan vs Actual (consensus demand plan vs. actual order intake) per material and plant,
       with forecast accuracy.
     columns:
       - name: material_id
+        data_type: text
         description: "{{ doc('material_id') }}"
       - name: plant_id
+        data_type: text
         description: "{{ doc('plant_id') }}"
       - name: plan_month
+        data_type: date
         description: "{{ doc('plan_month') }}"
       - name: plan_version
+        data_type: text
         description: "{{ doc('plan_version') }}"
       - name: planned_qty
+        data_type: integer
         description: "{{ doc('planned_qty') }}"
       - name: actual_qty
+        data_type: bigint
         description: Actual order intake in base units (standard orders created in the month); 0 when none.
       - name: variance_qty
+        data_type: bigint
         description: actual_qty - planned_qty. Positive means demand above plan (risk of shortage).
       - name: forecast_accuracy
+        data_type: double precision
         description: 1 - |actual - plan| / actual, floored at 0. Null when there is no actual demand.
 
   - name: fct_inventory_position
+    config:
+      meta:  # mirrors governance/governance.yaml; CI fails if the two disagree
+        owner_team: supply-chain-planning
+        tier: Tier1
+        confidentiality: Confidential
+        glossary_terms: Days of Inventory, Safety Stock
+        certification: Gold
+        data_contract: governance/contracts.yaml (validated in OpenMetadata)
+      contract: {enforced: true}  # dbt refuses to build if columns or types drift
+    constraints:
+      - {type: primary_key, columns: [material_plant_key]}
     description: Stock quantity and value per material/plant, safety-stock breaches and Days of Inventory.
     columns:
       - name: material_plant_key
+        data_type: text
         description: "{{ doc('material_plant_key') }}"
       - name: material_id
+        data_type: text
         description: "{{ doc('material_id') }}"
       - name: plant_id
+        data_type: text
         description: "{{ doc('plant_id') }}"
       - name: material_group
+        data_type: text
         description: "{{ doc('material_group') }}"
       - name: stock_qty
+        data_type: bigint
         description: Unrestricted stock summed over all storage locations of the plant, in base units.
       - name: stock_value_eur
+        data_type: numeric
         description: stock_qty x standard price, in EUR. Confidential.
       - name: safety_stock_qty
+        data_type: integer
         description: "{{ doc('safety_stock_qty') }}"
       - name: below_safety_stock
+        data_type: boolean
         description: True when stock_qty is below the safety stock (replenishment risk).
       - name: avg_daily_demand
+        data_type: numeric
         description: Ordered quantity of the last 90 days divided by 90. Null when there was no demand.
       - name: days_of_inventory
+        data_type: numeric
         description: Stock / average daily demand of the last 90 days.
 
   - name: rpt_otif_monthly
+    config:
+      meta:  # mirrors governance/governance.yaml; CI fails if the two disagree
+        owner_team: supply-chain-planning
+        tier: Tier1
+        confidentiality: Internal
+        glossary_terms: OTIF (On Time In Full)
+        certification: Gold
+        data_contract: governance/contracts.yaml (validated in OpenMetadata)
+      contract: {enforced: true}  # dbt refuses to build if columns or types drift
+    constraints:
+      - {type: primary_key, columns: [measure_month, plant_id]}
     description: Monthly OTIF, on-time and in-full rates per plant. Feeds the Supply Chain Performance dashboard.
     columns:
       - name: measure_month
+        data_type: date
         description: Month of the requested delivery date.
       - name: plant_id
+        data_type: text
         description: Delivering plant (WERKS).
       - name: order_lines
+        data_type: bigint
         description: Number of measured order lines (lines with a recorded goods issue date).
       - name: on_time_rate
+        data_type: double precision
         description: Share of order lines shipped on time, between 0 and 1.
       - name: in_full_rate
+        data_type: double precision
         description: Share of order lines delivered in full, between 0 and 1.
       - name: otif_rate
+        data_type: double precision
         description: Share of order lines both on time and in full, between 0 and 1. The headline OTIF KPI.
         data_tests:
           - not_null

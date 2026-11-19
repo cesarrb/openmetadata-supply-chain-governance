@@ -86,7 +86,8 @@ def apply():
 def validate(cid: str, attempts: int = 3) -> str:
     for _ in range(attempts):
         req("POST", f"/dataContracts/{cid}/validate")
-        for _ in range(30):
+        # On a freshly started stack the first quality pipeline can take a few minutes in Airflow.
+        for _ in range(72):  # up to 6 minutes
             time.sleep(5)
             r = req("GET", f"/dataContracts/{cid}/results/latest").json()
             if r.get("contractExecutionStatus") not in ("Running", "Queued"):

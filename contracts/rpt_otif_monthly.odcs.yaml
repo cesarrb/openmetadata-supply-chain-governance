@@ -155,6 +155,9 @@ schema:
 quality:
 - type: "custom"
   name: "assert_otif_rate_between_0_and_1"
+  description: "Validity check: every monthly OTIF rate in `rpt_otif_monthly` must\
+    \ lie between 0 and 1. A rate outside that range means the KPI calculation is\
+    \ broken.\n"
   engine: "openmetadata"
   implementation: "{\"name\":\"assert_otif_rate_between_0_and_1\",\"testDefinition\"\
     :\"assert_otif_rate_between_0_and_1_table\",\"parameterValues\":[]}"

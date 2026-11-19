@@ -153,6 +153,11 @@ schema:
 quality:
 - type: "custom"
   name: "assert_forecast_accuracy_not_degenerate"
+  description: "Plausibility check: fails if the average forecast accuracy in `fct_plan_vs_actual`\
+    \ is above 95 %. Real accuracy at material x plant x month level is far lower;\
+    \ a value that high means the formula is broken, not that the forecast is perfect.\
+    \ Added after an integer-division bug pushed accuracy to 97 % while every validity\
+    \ test still passed."
   engine: "openmetadata"
   implementation: "{\"name\":\"assert_forecast_accuracy_not_degenerate\",\"testDefinition\"\
     :\"assert_forecast_accuracy_not_degenerate_table\",\"parameterValues\":[]}"

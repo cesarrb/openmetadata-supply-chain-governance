@@ -16,6 +16,9 @@ source:
       type: DatabaseMetadata
       includeViews: true
       includeTags: true
+      # Descriptions are owned by the code (dbt YAML -> Postgres comments), so re-ingestion must
+      # refresh them; tags, owners and glossary are re-applied afterwards by `make governance`.
+      overrideMetadata: true
       schemaFilterPattern:
         includes: ["sap_erp", "analytics_staging", "analytics_marts"]
 sink:

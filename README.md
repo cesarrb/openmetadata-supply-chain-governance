@@ -9,7 +9,8 @@ measured governance scorecard**, built on [OpenMetadata](https://open-metadata.o
 Metabase, all kept as code and checked in CI.
 
 **Live demo (no install needed):** [dbt docs with models, columns, tests and the lineage graph](https://cesarrb.github.io/openmetadata-supply-chain-governance/#!/model/model.supply_chain_analytics.fct_otif?g_v=1),
-rebuilt by CI on every push. The link opens the OTIF fact table with its lineage back to the SAP tables.
+rebuilt by CI on every push. The link opens the OTIF fact table with its lineage back to the SAP tables; each
+certified table shows its owner team, Tier, Gold certification, glossary terms and enforced contract.
 The full OpenMetadata catalogue runs locally with Docker (see [Run it](#run-it)) and is shown in the
 [screenshots](#screenshots).
 
@@ -29,8 +30,8 @@ marts → dashboard (right). OpenMetadata derives it from dbt and from each char
 | **Lineage** | View SQL + dbt manifest + Metabase question SQL | ERP table → staging → mart → dashboard chart; 41 table edges, 182 column-level mappings |
 | **Classification** | Auto-classification + steward review in YAML | 5 personal-data columns tagged; 1 missed column added and 4 false positives rejected by the steward |
 | **Business glossary** | 13 approved terms (OTIF, Plan vs Actual, Days of Inventory, Safety Stock…) | Terms linked to the exact column that computes each KPI |
-| **Data quality** | OpenMetadata test runner (raw layer) + dbt tests (transformations) | 31 tests: 25 pass, and the 6 failures are exactly the 3 defects injected on purpose, caught at both layers; each failure opens an incident |
-| **Data contracts** | Schema, semantics, quality, SLA and security per certified table; exported as ODCS | 4 contracts, 4 passing validation |
+| **Data quality** | OpenMetadata test runner (raw layer) + dbt data tests (transformations) + dbt unit tests (KPI logic) | 31 data tests: 25 pass, and the 6 failures are exactly the 3 defects injected on purpose, caught at both layers; each failure opens an incident. 2 unit tests prove the OTIF and forecast-accuracy formulas on hand-made cases |
+| **Data contracts** | Consumer contract in OpenMetadata (schema, semantics, quality, SLA, security; exported as ODCS) + enforced dbt model contract with primary keys on the producer side | 4 contracts, 4 passing validation; dbt refuses to build a certified table whose columns or types drift |
 | **Access control** | One policy: Restricted data rows visible only to the owner team | Verified per persona with OpenMetadata's permission API |
 | **Ownership & trust** | 4 teams, 3 domains, 1 data product, Tier, Gold certification | 17 governed tables, 4 certified |
 | **Governance KPIs** | `scripts/scorecard.py` measures adoption from the API | [docs/SCORECARD.md](docs/SCORECARD.md) |
@@ -118,8 +119,10 @@ check CI runs.
 - **Contracts for what consumers depend on.** Only certified tables get contracts, and CI refuses a
   certification without one.
 - **Plausibility tests, not only validity tests.** A real integer-division bug pushed forecast accuracy
-  to 97 %. Every range test passed; the BI dashboard exposed it. A dedicated test now guards it
-  (see the operating model, section 7).
+  to 97 %. Every range test passed; the BI dashboard exposed it. A plausibility test and a unit test
+  that reproduces the exact case (plan 90, actual 100 must give 0.9, not 1.0) now guard it.
+- **One source of truth, checked.** Owners, Tier and glossary terms live in `governance.yaml`; the dbt
+  docs repeat them for readers, and CI fails if the two ever disagree.
 - **Governance as code, measured.** Ownership, glossary, contracts and policies go through pull requests;
   adoption KPIs are computed from the API, not typed into a slide.
 - **Laptop-friendly.** The ERP and Metabase databases share the Postgres container with OpenMetadata's
@@ -129,8 +132,9 @@ check CI runs.
 
 - OpenMetadata quirks found on the way: range tests (`columnValuesToBeBetween`) are rejected on Postgres
   `NUMERIC` columns without precision; contract SLA timezones accept only a fixed list; creating users
-  needs an admin principal (the ingestion bot is not one); and contract validation must wait until
-  Airflow has loaded the quality pipeline deployed on save.
+  needs an admin principal (the ingestion bot is not one); contract validation must wait until
+  Airflow has loaded the quality pipeline deployed on save; and re-ingesting a database does not refresh
+  descriptions it already holds unless `overrideMetadata` is on.
 - With Power BI or Tableau, the native OpenMetadata connector would replace the Metabase step; the
   governance model does not change.
 - Credentials in this repository are local demo defaults; nothing is exposed outside `localhost`.

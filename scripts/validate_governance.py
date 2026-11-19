@@ -121,6 +121,26 @@ for u in GOV.get("demo_users", []):
     check(u["team"] in teams, f"user {u['name']}: team unknown")
     check(u["role"] in roles, f"user {u['name']}: role unknown")
 
+# dbt model metadata must mirror governance.yaml (the dbt docs demo shows it; drift would mislead)
+display = {t.get("displayName", t["name"]): t["name"] for t in GOV["glossary"]["terms"]}
+marts = yaml.safe_load((ROOT / "dbt/models/marts/_marts.yml").read_text())["models"]
+for mdl in marts:
+    key, where = f"analytics_marts.{mdl['name']}", f"dbt meta {mdl['name']}"
+    a, cfg = GOV["assets"].get(key), mdl.get("config", {})
+    meta = cfg.get("meta", {})
+    if a is None:
+        errors.append(f"{where}: model is not governed in governance.yaml")
+        continue
+    check(meta.get("owner_team") == a["owner"], f"{where}: owner_team differs from governance.yaml")
+    check(meta.get("tier") == a["tier"], f"{where}: tier differs from governance.yaml")
+    check(meta.get("confidentiality") == a["confidentiality"], f"{where}: confidentiality differs")
+    dbt_terms = sorted(display.get(t.strip(), "?" + t.strip()) for t in meta.get("glossary_terms", "").split(", ") if t.strip())
+    check(dbt_terms == sorted(a.get("glossary", [])), f"{where}: glossary terms {dbt_terms} differ from governance.yaml")
+    certified = bool(a.get("certified"))
+    check((meta.get("certification") == "Gold") == certified, f"{where}: certification differs from governance.yaml")
+    check(cfg.get("contract", {}).get("enforced", False) == certified,
+          f"{where}: certified models must enforce a dbt model contract (and only those)")
+
 # Dashboard
 d = GOV["dashboard"]
 check(d["owner"] in teams and d["domain"] in domains, "dashboard: owner or domain unknown")

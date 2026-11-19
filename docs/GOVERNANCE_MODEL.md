@@ -85,7 +85,7 @@ to [`contracts/`](../contracts):
 
 | Contract part | Content in this repo | Validated by OpenMetadata |
 |---|---|---|
-| Schema | The columns consumers may rely on, with types | Columns still exist with the same type |
+| Schema | The columns consumers may rely on, with types; also enforced on the producer side by a dbt model contract with primary keys | Columns still exist with the same type |
 | Semantics | Metadata rules: has owner, has description, has domain | Rules evaluated on the table |
 | Quality | The table's test cases (OpenMetadata and dbt) | All linked tests pass |
 | SLA | Refreshed daily, available by 06:00, latency under 1 day, 3-year retention | Shown to consumers |
@@ -93,6 +93,10 @@ to [`contracts/`](../contracts):
 
 Certified in this repo: `fct_otif`, `rpt_otif_monthly`, `fct_plan_vs_actual`, `fct_inventory_position`:
 **4 contracts, 4 passing**.
+
+The contract is enforced at both ends: OpenMetadata validates it for consumers, and on the producer side the
+dbt model contract (`contract: enforced`) stops the build if a column is renamed, dropped or changes type,
+and creates the primary key in Postgres, so duplicate rows cannot be loaded.
 
 ## 6. Access control
 
@@ -122,7 +126,8 @@ Three complementary layers:
 | Layer | Tool | Examples |
 |---|---|---|
 | Source (raw ERP) | OpenMetadata test runner | goods-issue date not null, stock not negative, PO material exists in material master, e-mail format |
-| Transformation | dbt tests (results ingested into OpenMetadata) | unique / not null keys, referential integrity, accepted values, KPI between 0 and 1, forecast accuracy not degenerate |
+| Transformation | dbt data tests (results ingested into OpenMetadata) | unique / not null keys, referential integrity, accepted values, KPI between 0 and 1, forecast accuracy not degenerate |
+| KPI logic | dbt unit tests on hand-made inputs | OTIF rules (on the day = on time, one day late = not, short = not in full, split deliveries added, returns excluded); forecast-accuracy formula incl. the integer-division case |
 | Pull request | GitHub Actions | rebuilds the warehouse, fails if a known defect stops being detected or anything else breaks, fails if any table or column lacks a description, validates governance YAML |
 
 Three defects are injected on purpose in the synthetic data: 23 deliveries without goods-issue date,
@@ -136,8 +141,9 @@ OTIF, so without the test the KPI would look better than it is.
 **A real bug the tests now guard against.** Changing quantities from `numeric` to `integer` made
 Postgres divide integers, and forecast accuracy came out at 97 % instead of 72 %. No range test
 noticed, because 0.97 is a valid ratio. Building the Metabase dashboard exposed it. The fix casts to
-`numeric`, and a new dbt test (`assert_forecast_accuracy_not_degenerate`) fails if accuracy is
-implausibly high. The lesson for the operating model: plausibility tests matter as much as validity tests.
+`numeric`; a dbt test (`assert_forecast_accuracy_not_degenerate`) fails if accuracy is implausibly
+high, and a unit test reproduces the exact case (plan 90, actual 100 must give 0.9; integer maths gives 1.0).
+Reintroducing the bug makes the unit test fail. The lesson for the operating model: plausibility tests matter as much as validity tests.
 
 ## 8. Onboarding a new domain (e.g. Quality Management, SAP QM)
 

@@ -1,0 +1,60 @@
+# dbt unit tests: check the KPI LOGIC with small hand-made inputs, independently of the data.
+# Data tests ask "is today's data valid?"; unit tests ask "is the formula right?".
+version: 2
+unit_tests:
+  - name: otif_on_time_and_in_full_rules
+    description: >
+      One case per rule of the OTIF definition: shipped on the requested date counts as on time,
+      one day late does not, a short delivery is not in full, split deliveries are added up,
+      and returns (order type RE) are not measured.
+    model: fct_otif
+    given:
+      - input: ref('stg_sales_order_line')
+        rows:
+          - {sales_order_id: "S1", sales_order_item: 10, order_type: "OR", ordered_qty: 10, requested_delivery_date: "2026-05-10"}
+          - {sales_order_id: "S2", sales_order_item: 10, order_type: "OR", ordered_qty: 10, requested_delivery_date: "2026-05-10"}
+          - {sales_order_id: "S3", sales_order_item: 10, order_type: "OR", ordered_qty: 10, requested_delivery_date: "2026-05-10"}
+          - {sales_order_id: "S4", sales_order_item: 10, order_type: "OR", ordered_qty: 10, requested_delivery_date: "2026-05-10"}
+          - {sales_order_id: "S5", sales_order_item: 10, order_type: "RE", ordered_qty: 10, requested_delivery_date: "2026-05-10"}
+      - input: ref('stg_delivery_line')
+        rows:
+          - {sales_order_id: "S1", sales_order_item: 10, delivered_qty: 10, actual_goods_issue_date: "2026-05-10"}  # on the day, full
+          - {sales_order_id: "S2", sales_order_item: 10, delivered_qty: 10, actual_goods_issue_date: "2026-05-11"}  # one day late
+          - {sales_order_id: "S3", sales_order_item: 10, delivered_qty: 9, actual_goods_issue_date: "2026-05-09"}   # short by 1
+          - {sales_order_id: "S4", sales_order_item: 10, delivered_qty: 6, actual_goods_issue_date: "2026-05-08"}   # split delivery,
+          - {sales_order_id: "S4", sales_order_item: 10, delivered_qty: 4, actual_goods_issue_date: "2026-05-10"}   # 6 + 4 = full
+          - {sales_order_id: "S5", sales_order_item: 10, delivered_qty: 10, actual_goods_issue_date: "2026-05-10"}  # return: excluded
+      - input: ref('stg_customer')
+        rows: []
+    expect:
+      rows:
+        - {sales_order_id: "S1", is_on_time: true,  is_in_full: true,  is_otif: true}
+        - {sales_order_id: "S2", is_on_time: false, is_in_full: true,  is_otif: false}
+        - {sales_order_id: "S3", is_on_time: true,  is_in_full: false, is_otif: false}
+        - {sales_order_id: "S4", is_on_time: true,  is_in_full: true,  is_otif: true}
+
+  - name: forecast_accuracy_formula
+    description: >
+      Forecast accuracy = 1 - |actual - plan| / actual, floored at 0, null without demand.
+      The 90-vs-100 case is the integer-division bug: with integer maths it returns 1.0 instead of 0.9.
+    model: fct_plan_vs_actual
+    given:
+      - input: ref('stg_demand_plan')
+        rows:
+          - {material_id: "M1", plant_id: "P1", plan_month: "2026-05-01", planned_qty: 80}
+          - {material_id: "M2", plant_id: "P1", plan_month: "2026-05-01", planned_qty: 90}
+          - {material_id: "M3", plant_id: "P1", plan_month: "2026-05-01", planned_qty: 300}
+          - {material_id: "M4", plant_id: "P1", plan_month: "2026-05-01", planned_qty: 50}
+      - input: ref('stg_sales_order_line')
+        rows:
+          - {material_id: "M1", plant_id: "P1", order_type: "OR", order_date: "2026-05-03", ordered_qty: 60}
+          - {material_id: "M1", plant_id: "P1", order_type: "OR", order_date: "2026-05-20", ordered_qty: 40}
+          - {material_id: "M1", plant_id: "P1", order_type: "RE", order_date: "2026-05-21", ordered_qty: 30}  # return: ignored
+          - {material_id: "M2", plant_id: "P1", order_type: "OR", order_date: "2026-05-05", ordered_qty: 100}
+          - {material_id: "M3", plant_id: "P1", order_type: "OR", order_date: "2026-05-05", ordered_qty: 100}
+    expect:
+      rows:
+        - {material_id: "M1", actual_qty: 100, variance_qty: 20,   forecast_accuracy: 0.8}
+        - {material_id: "M2", actual_qty: 100, variance_qty: 10,   forecast_accuracy: 0.9}
+        - {material_id: "M3", actual_qty: 100, variance_qty: -200, forecast_accuracy: 0.0}
+        - {material_id: "M4", actual_qty: 0,   variance_qty: -50,  forecast_accuracy: null}
