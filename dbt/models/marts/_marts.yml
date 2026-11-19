@@ -1,34 +1,133 @@
 version: 2
 models:
   - name: dim_material
-    description: Material x plant dimension used by every supply-chain KPI.
+    description: Material x plant dimension used by every supply-chain KPI. One row per material and plant.
     columns:
       - name: material_plant_key
+        description: "{{ doc('material_plant_key') }}"
         data_tests: [unique, not_null]
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: plant_id
+        description: "{{ doc('plant_id') }}"
+      - name: material_description
+        description: "{{ doc('material_description') }}"
+      - name: material_type
+        description: "{{ doc('material_type') }}"
+      - name: material_group
+        description: "{{ doc('material_group') }}"
+      - name: base_uom
+        description: "{{ doc('base_uom') }}"
+      - name: mrp_controller
+        description: "{{ doc('mrp_controller') }}"
+      - name: planned_lead_time_days
+        description: "{{ doc('planned_lead_time_days') }}"
+      - name: safety_stock_qty
+        description: "{{ doc('safety_stock_qty') }}"
+      - name: standard_price_eur
+        description: "{{ doc('standard_price_eur') }}"
+      - name: is_active
+        description: "{{ doc('is_active') }}"
+
   - name: fct_otif
     description: >
       OTIF (On Time In Full) at sales-order-line level. A line is OTIF when it is
       shipped on or before the requested delivery date AND the full quantity is delivered.
+      Only delivered standard orders (type OR) are measured; returns are excluded.
     columns:
-      - name: is_otif
-        description: True when the line is both on time and in full.
+      - name: sales_order_id
+        description: "{{ doc('sales_order_id') }}"
+      - name: sales_order_item
+        description: "{{ doc('sales_order_item') }}"
+      - name: customer_id
+        description: "{{ doc('customer_id') }}"
+      - name: customer_abc_class
+        description: "{{ doc('customer_abc_class') }} Lets OTIF be analysed for key accounts."
+      - name: plant_id
+        description: Delivering plant (WERKS).
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: order_date
+        description: Sales order creation date (ERDAT).
+      - name: requested_delivery_date
+        description: Delivery date requested by the customer (VDATU). The on-time deadline.
+      - name: actual_goods_issue_date
+        description: >
+          Latest goods issue date across the deliveries of the line. Empty when SAP did not record
+          it (a known source defect, caught by a data-quality test).
+      - name: measure_month
+        description: First day of the month of the requested delivery date; OTIF is reported in this month.
+      - name: ordered_qty
+        description: "{{ doc('ordered_qty') }}"
+      - name: delivered_qty
+        description: Total quantity delivered for the line, across all its deliveries.
       - name: is_on_time
         description: Goods issue date <= customer requested delivery date.
       - name: is_in_full
         description: Delivered quantity >= ordered quantity.
+      - name: is_otif
+        description: True when the line is both on time and in full.
+
   - name: fct_plan_vs_actual
-    description: Monthly Plan vs Actual (consensus demand plan vs. actual order intake) with forecast accuracy.
+    description: >
+      Monthly Plan vs Actual (consensus demand plan vs. actual order intake) per material and plant,
+      with forecast accuracy.
     columns:
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: plant_id
+        description: "{{ doc('plant_id') }}"
+      - name: plan_month
+        description: "{{ doc('plan_month') }}"
+      - name: plan_version
+        description: "{{ doc('plan_version') }}"
+      - name: planned_qty
+        description: "{{ doc('planned_qty') }}"
+      - name: actual_qty
+        description: Actual order intake in base units (standard orders created in the month); 0 when none.
+      - name: variance_qty
+        description: actual_qty - planned_qty. Positive means demand above plan (risk of shortage).
       - name: forecast_accuracy
         description: 1 - |actual - plan| / actual, floored at 0. Null when there is no actual demand.
+
   - name: fct_inventory_position
     description: Stock quantity and value per material/plant, safety-stock breaches and Days of Inventory.
     columns:
+      - name: material_plant_key
+        description: "{{ doc('material_plant_key') }}"
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: plant_id
+        description: "{{ doc('plant_id') }}"
+      - name: material_group
+        description: "{{ doc('material_group') }}"
+      - name: stock_qty
+        description: Unrestricted stock summed over all storage locations of the plant, in base units.
+      - name: stock_value_eur
+        description: stock_qty x standard price, in EUR. Confidential.
+      - name: safety_stock_qty
+        description: "{{ doc('safety_stock_qty') }}"
+      - name: below_safety_stock
+        description: True when stock_qty is below the safety stock (replenishment risk).
+      - name: avg_daily_demand
+        description: Ordered quantity of the last 90 days divided by 90. Null when there was no demand.
       - name: days_of_inventory
         description: Stock / average daily demand of the last 90 days.
+
   - name: rpt_otif_monthly
     description: Monthly OTIF, on-time and in-full rates per plant. Feeds the Supply Chain Performance dashboard.
     columns:
+      - name: measure_month
+        description: Month of the requested delivery date.
+      - name: plant_id
+        description: Delivering plant (WERKS).
+      - name: order_lines
+        description: Number of measured order lines (lines with a recorded goods issue date).
+      - name: on_time_rate
+        description: Share of order lines shipped on time, between 0 and 1.
+      - name: in_full_rate
+        description: Share of order lines delivered in full, between 0 and 1.
       - name: otif_rate
+        description: Share of order lines both on time and in full, between 0 and 1. The headline OTIF KPI.
         data_tests:
           - not_null

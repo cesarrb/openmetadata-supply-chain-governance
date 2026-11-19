@@ -4,62 +4,176 @@ models:
     description: Cleaned material master (one row per material). Renames SAP MARA fields to business names.
     columns:
       - name: material_id
-        description: SAP material number (MATNR).
+        description: "{{ doc('material_id') }}"
         data_tests: [unique, not_null]
+      - name: material_description
+        description: "{{ doc('material_description') }}"
       - name: material_type
-        description: ROH raw material, HALB semi-finished, FERT finished good.
+        description: "{{ doc('material_type') }}"
         data_tests:
           - accepted_values:
               arguments: {values: ["ROH", "HALB", "FERT"]}
+      - name: material_group
+        description: "{{ doc('material_group') }}"
+      - name: base_uom
+        description: "{{ doc('base_uom') }}"
+      - name: gross_weight_kg
+        description: Gross weight per base unit in kg (BRGEW).
+      - name: is_active
+        description: "{{ doc('is_active') }}"
+
   - name: stg_material_plant
     description: Plant-specific planning parameters (lead time, safety stock, standard price) from MARC.
     columns:
       - name: material_id
+        description: "{{ doc('material_id') }}"
         data_tests:
           - not_null
           - relationships:
               arguments: {to: ref('stg_material'), field: material_id}
+      - name: plant_id
+        description: "{{ doc('plant_id') }}"
+      - name: mrp_controller
+        description: "{{ doc('mrp_controller') }}"
+      - name: planned_lead_time_days
+        description: "{{ doc('planned_lead_time_days') }}"
       - name: safety_stock_qty
-        description: Safety stock in base unit of measure.
+        description: "{{ doc('safety_stock_qty') }}"
+      - name: standard_price_eur
+        description: "{{ doc('standard_price_eur') }}"
+
   - name: stg_customer
     description: Customer master WITHOUT personal contact data (data minimisation; PII stays in the raw layer).
     columns:
       - name: customer_id
+        description: SAP customer number (KUNNR). Primary key.
         data_tests: [unique, not_null]
+      - name: customer_name
+        description: Customer company name (NAME1). A company, not a person.
+      - name: country_code
+        description: "{{ doc('country_code') }}"
+      - name: city
+        description: "{{ doc('city') }}"
+      - name: customer_abc_class
+        description: "{{ doc('customer_abc_class') }}"
+
   - name: stg_vendor
-    description: Vendor master without personal contact data.
+    description: Vendor master without personal contact data (data minimisation; PII stays in the raw layer).
     columns:
       - name: vendor_id
+        description: SAP vendor number (LIFNR). Primary key.
         data_tests: [unique, not_null]
+      - name: vendor_name
+        description: Vendor company name (NAME1). A company, not a person.
+      - name: country_code
+        description: "{{ doc('country_code') }}"
+      - name: city
+        description: "{{ doc('city') }}"
+
   - name: stg_purchase_order_line
-    description: Purchase order lines (EKKO header joined to EKPO items).
+    description: Purchase order lines (EKKO header joined to EKPO items). One row per PO line.
     columns:
+      - name: purchase_order_id
+        description: SAP purchase order number (EBELN).
+      - name: purchase_order_item
+        description: Purchase order item number (EBELP).
+      - name: vendor_id
+        description: "{{ doc('vendor_id') }}"
+        data_tests:
+          - relationships:
+              arguments: {to: ref('stg_vendor'), field: vendor_id}
+      - name: order_date
+        description: Purchase order date (BEDAT).
+      - name: order_type
+        description: "{{ doc('order_type') }}"
+      - name: currency
+        description: Currency of the purchase order (WAERS).
       - name: material_id
         description: Material ordered. Must exist in the material master.
         data_tests:
           - relationships:
               arguments: {to: ref('stg_material'), field: material_id}
-      - name: vendor_id
-        data_tests:
-          - relationships:
-              arguments: {to: ref('stg_vendor'), field: vendor_id}
+      - name: plant_id
+        description: Receiving plant (WERKS).
+      - name: ordered_qty
+        description: "{{ doc('ordered_qty') }}"
+      - name: net_price
+        description: "{{ doc('net_price') }} Confidential."
+      - name: order_value
+        description: ordered_qty x net_price, in the order currency. Confidential.
+      - name: agreed_delivery_date
+        description: Delivery date agreed with the vendor (EINDT).
+
   - name: stg_sales_order_line
-    description: Sales order lines (VBAK header joined to VBAP items).
+    description: Sales order lines (VBAK header joined to VBAP items). One row per sales order line.
     columns:
+      - name: sales_order_id
+        description: "{{ doc('sales_order_id') }}"
+      - name: sales_order_item
+        description: "{{ doc('sales_order_item') }}"
+      - name: customer_id
+        description: "{{ doc('customer_id') }}"
+      - name: order_date
+        description: Sales order creation date (ERDAT). Used for order intake in Plan vs Actual.
       - name: requested_delivery_date
         description: Date the customer asked to receive the goods. Basis of the OTIF on-time check.
         data_tests: [not_null]
+      - name: order_type
+        description: "{{ doc('order_type') }}"
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: plant_id
+        description: Delivering plant (WERKS).
+      - name: ordered_qty
+        description: "{{ doc('ordered_qty') }} Basis of the OTIF in-full check."
+      - name: net_price
+        description: "{{ doc('net_price') }}"
+
   - name: stg_delivery_line
-    description: Outbound delivery lines (LIKP header joined to LIPS items).
+    description: Outbound delivery lines (LIKP header joined to LIPS items). One row per delivery line.
     columns:
+      - name: delivery_id
+        description: SAP outbound delivery number (VBELN of LIKP).
+      - name: delivery_item
+        description: Delivery item number (POSNR of LIPS).
+      - name: sales_order_id
+        description: Sales order this delivery fulfils (VGBEL).
+      - name: sales_order_item
+        description: Sales order item this delivery line fulfils (VGPOS).
+      - name: plant_id
+        description: Shipping plant (WERKS).
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: delivered_qty
+        description: Delivered quantity in base units (LFIMG).
       - name: actual_goods_issue_date
         description: Actual goods issue (shipping) date. Required for OTIF.
         data_tests: [not_null]
+
   - name: stg_stock
     description: Unrestricted stock by material, plant and storage location (MARD).
     columns:
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: plant_id
+        description: "{{ doc('plant_id') }}"
+      - name: storage_location
+        description: Storage location inside the plant (LGORT).
       - name: unrestricted_stock_qty
+        description: Unrestricted-use stock in base units (LABST). Must not be negative.
         data_tests:
           - non_negative
+
   - name: stg_demand_plan
-    description: Monthly consensus demand plan from the planning tool.
+    description: Monthly consensus demand plan from the planning tool. One row per material, plant and month.
+    columns:
+      - name: material_id
+        description: "{{ doc('material_id') }}"
+      - name: plant_id
+        description: "{{ doc('plant_id') }}"
+      - name: plan_month
+        description: "{{ doc('plan_month') }}"
+      - name: planned_qty
+        description: "{{ doc('planned_qty') }}"
+      - name: plan_version
+        description: "{{ doc('plan_version') }}"

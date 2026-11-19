@@ -53,6 +53,9 @@ jobs:
           uv run dbt run
           uv run dbt docs generate --static
 
+      - name: Documentation gate - every table, column, macro and test described
+        run: uv run python scripts/check_docs_coverage.py
+
       - name: dbt test (failures are evaluated in the next step)
         working-directory: dbt
         env:

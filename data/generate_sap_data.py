@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import pathlib
 import random
 
 import psycopg2
 from psycopg2.extras import execute_values
+import yaml
 
 SEED = 42
 rng = random.Random(SEED)
@@ -169,7 +171,6 @@ def build():
 DDL = """
 DROP SCHEMA IF EXISTS sap_erp CASCADE;
 CREATE SCHEMA sap_erp;
-COMMENT ON SCHEMA sap_erp IS 'Raw extract of the ERP (SAP ECC-style). Source system of record for materials, procurement, sales and stock.';
 
 CREATE TABLE sap_erp.mara (matnr text PRIMARY KEY, maktx text, mtart text, matkl text, meins text, brgew numeric(10,2), is_active boolean);
 CREATE TABLE sap_erp.marc (matnr text, werks text, dispo text, plifz int, eisbe int, stprs numeric(12,2), PRIMARY KEY (matnr, werks));
@@ -185,39 +186,15 @@ CREATE TABLE sap_erp.mard (matnr text, werks text, lgort text, labst int, PRIMAR
 CREATE TABLE sap_erp.demand_plan (matnr text, werks text, plan_month date, planned_qty int, plan_version text, PRIMARY KEY (matnr, werks, plan_month));
 """
 
-COMMENTS = {
-    "mara": ("Material master - general data (SAP table MARA).", {
-        "matnr": "Material number", "maktx": "Material description", "mtart": "Material type (ROH raw, HALB semi-finished, FERT finished)",
-        "matkl": "Material group", "meins": "Base unit of measure", "brgew": "Gross weight (kg)", "is_active": "Material not flagged for deletion"}),
-    "marc": ("Material master - plant data (SAP table MARC).", {
-        "werks": "Plant", "dispo": "MRP controller", "plifz": "Planned delivery time in days",
-        "eisbe": "Safety stock (units)", "stprs": "Standard price (EUR)"}),
-    "lfa1": ("Vendor master (SAP table LFA1). Contains personal contact data.", {
-        "lifnr": "Vendor number", "name1": "Vendor name", "land1": "Country key", "ort01": "City",
-        "contact_name": "Name of the vendor contact person", "contact_email": "E-mail of the vendor contact person",
-        "contact_phone": "Phone of the vendor contact person", "stceg": "VAT registration number"}),
-    "kna1": ("Customer master (SAP table KNA1). Contains personal contact data.", {
-        "kunnr": "Customer number", "name1": "Customer name", "contact_name": "Name of the customer contact person",
-        "contact_email": "E-mail of the customer contact person", "abc_class": "Customer ABC classification"}),
-    "ekko": ("Purchasing document header (SAP table EKKO).", {
-        "ebeln": "Purchase order number", "lifnr": "Vendor number", "bedat": "Purchase order date",
-        "bsart": "Order type (NB standard, UB stock transfer)", "waers": "Currency"}),
-    "ekpo": ("Purchasing document item (SAP table EKPO).", {
-        "ebelp": "PO item", "menge": "Ordered quantity", "netpr": "Net price", "eindt": "Agreed delivery date"}),
-    "vbak": ("Sales document header (SAP table VBAK).", {
-        "vbeln": "Sales order number", "kunnr": "Sold-to customer", "erdat": "Order creation date",
-        "vdatu": "Customer requested delivery date", "auart": "Order type (OR standard, RE return)"}),
-    "vbap": ("Sales document item (SAP table VBAP).", {
-        "posnr": "Sales order item", "kwmeng": "Ordered quantity", "netpr": "Net selling price"}),
-    "likp": ("Outbound delivery header (SAP table LIKP).", {
-        "vbeln": "Delivery number", "vgbel": "Reference sales order", "wadat_ist": "Actual goods issue date"}),
-    "lips": ("Outbound delivery item (SAP table LIPS).", {
-        "vgbel": "Reference sales order", "vgpos": "Reference sales order item", "lfimg": "Delivered quantity"}),
-    "mard": ("Storage location stock (SAP table MARD).", {
-        "lgort": "Storage location", "labst": "Unrestricted-use stock"}),
-    "demand_plan": ("Monthly consensus demand plan exported from the planning tool (IBP/APO-style).", {
-        "plan_month": "First day of the planned month", "planned_qty": "Consensus planned quantity", "plan_version": "Plan version"}),
-}
+# Descriptions live in one place, the dbt sources file, and are written here as Postgres comments
+# (which OpenMetadata ingests). dbt docs and the catalogue therefore show the same text.
+SOURCES_YML = pathlib.Path(__file__).resolve().parents[1] / "dbt/models/staging/_sources.yml"
+
+
+def load_comments() -> dict[str, tuple[str, dict[str, str]]]:
+    src = yaml.safe_load(SOURCES_YML.read_text())["sources"][0]
+    return {t["name"]: (t["description"].strip(), {c["name"]: c["description"].strip() for c in t.get("columns", [])})
+            for t in src["tables"]}
 
 
 def main():
@@ -227,7 +204,8 @@ def main():
         for table, rows in data.items():
             execute_values(cur, f"INSERT INTO sap_erp.{table} VALUES %s", rows)
             print(f"sap_erp.{table:12s} {len(rows):6d} rows")
-        for table, (tdesc, cols) in COMMENTS.items():
+        cur.execute("COMMENT ON SCHEMA sap_erp IS %s", (yaml.safe_load(SOURCES_YML.read_text())["sources"][0]["description"].strip(),))
+        for table, (tdesc, cols) in load_comments().items():
             cur.execute(f"COMMENT ON TABLE sap_erp.{table} IS %s", (tdesc,))
             for col, cdesc in cols.items():
                 cur.execute(f"COMMENT ON COLUMN sap_erp.{table}.{col} IS %s", (cdesc,))

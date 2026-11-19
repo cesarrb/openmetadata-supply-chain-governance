@@ -1,18 +1,203 @@
+# Single source of truth for the descriptions of the raw ERP tables.
+# data/generate_sap_data.py reads this file and writes the same text as Postgres comments,
+# which is what OpenMetadata ingests. dbt docs and the catalogue therefore always agree.
 version: 2
 sources:
   - name: sap_erp
-    description: Raw ERP extract (SAP ECC-style tables).
+    description: >
+      Raw extract of the ERP (SAP ECC-style). Source system of record for materials, procurement,
+      sales and stock. Column names keep the original SAP field names so the catalogue can be
+      matched against SAP documentation.
     schema: sap_erp
     tables:
       - name: mara
+        description: Material master, general data (SAP table MARA). One row per material.
+        columns:
+          - name: matnr
+            description: Material number (MATNR). Primary key.
+          - name: maktx
+            description: Material description (MAKTX).
+          - name: mtart
+            description: Material type (MTART). ROH raw material, HALB semi-finished, FERT finished good.
+          - name: matkl
+            description: Material group (MATKL), used to group materials for purchasing and reporting.
+          - name: meins
+            description: Base unit of measure (MEINS); all quantities of the material are in this unit.
+          - name: brgew
+            description: Gross weight in kg (BRGEW).
+          - name: is_active
+            description: True when the material is not flagged for deletion.
+
       - name: marc
+        description: Material master, plant data (SAP table MARC). One row per material and plant.
+        columns:
+          - name: matnr
+            description: Material number (MATNR). Part of the primary key.
+          - name: werks
+            description: Plant (WERKS). Part of the primary key.
+          - name: dispo
+            description: MRP controller (DISPO), the planner responsible for the material at this plant.
+          - name: plifz
+            description: Planned delivery time in days (PLIFZ), used by MRP to schedule replenishment.
+          - name: eisbe
+            description: Safety stock in base units (EISBE).
+          - name: stprs
+            description: Standard price in EUR (STPRS), used to value stock.
+
       - name: lfa1
+        description: Vendor master (SAP table LFA1). Contains personal contact data (Restricted).
+        columns:
+          - name: lifnr
+            description: Vendor number (LIFNR). Primary key.
+          - name: name1
+            description: Vendor company name (NAME1).
+          - name: land1
+            description: Country key, ISO 3166 (LAND1).
+          - name: ort01
+            description: City (ORT01).
+          - name: contact_name
+            description: Name of the vendor contact person. Personal data.
+          - name: contact_email
+            description: E-mail of the vendor contact person. Personal data.
+          - name: contact_phone
+            description: Phone number of the vendor contact person. Personal data.
+          - name: stceg
+            description: VAT registration number (STCEG). Confidential.
+
       - name: kna1
+        description: Customer master (SAP table KNA1). Contains personal contact data (Restricted).
+        columns:
+          - name: kunnr
+            description: Customer number (KUNNR). Primary key.
+          - name: name1
+            description: Customer company name (NAME1).
+          - name: land1
+            description: Country key, ISO 3166 (LAND1).
+          - name: ort01
+            description: City (ORT01).
+          - name: contact_name
+            description: Name of the customer contact person. Personal data.
+          - name: contact_email
+            description: E-mail of the customer contact person. Personal data.
+          - name: abc_class
+            description: Customer ABC classification (A = most important by revenue).
+
       - name: ekko
+        description: Purchasing document header (SAP table EKKO). One row per purchase order.
+        columns:
+          - name: ebeln
+            description: Purchase order number (EBELN). Primary key.
+          - name: lifnr
+            description: Vendor number (LIFNR); refers to LFA1.
+          - name: bedat
+            description: Purchase order date (BEDAT).
+          - name: bsart
+            description: Order type (BSART). NB standard order, UB stock transport order.
+          - name: waers
+            description: Currency key (WAERS).
+
       - name: ekpo
+        description: Purchasing document item (SAP table EKPO). One row per purchase order line.
+        columns:
+          - name: ebeln
+            description: Purchase order number (EBELN); refers to EKKO.
+          - name: ebelp
+            description: Purchase order item number (EBELP).
+          - name: matnr
+            description: Material ordered (MATNR); should exist in MARA.
+          - name: werks
+            description: Receiving plant (WERKS).
+          - name: menge
+            description: Ordered quantity in base units (MENGE).
+          - name: netpr
+            description: Net price per unit in the order currency (NETPR). Confidential.
+          - name: eindt
+            description: Delivery date agreed with the vendor (EINDT).
+
       - name: vbak
+        description: Sales document header (SAP table VBAK). One row per sales order.
+        columns:
+          - name: vbeln
+            description: Sales order number (VBELN). Primary key.
+          - name: kunnr
+            description: Sold-to customer (KUNNR); refers to KNA1.
+          - name: erdat
+            description: Order creation date (ERDAT).
+          - name: vdatu
+            description: Delivery date requested by the customer (VDATU). Basis of the OTIF on-time check.
+          - name: auart
+            description: Sales order type (AUART). OR standard order, RE return.
+
       - name: vbap
+        description: Sales document item (SAP table VBAP). One row per sales order line.
+        columns:
+          - name: vbeln
+            description: Sales order number (VBELN); refers to VBAK.
+          - name: posnr
+            description: Sales order item number (POSNR).
+          - name: matnr
+            description: Material sold (MATNR).
+          - name: werks
+            description: Delivering plant (WERKS).
+          - name: kwmeng
+            description: Ordered quantity in base units (KWMENG). Basis of the OTIF in-full check.
+          - name: netpr
+            description: Net selling price per unit (NETPR).
+
       - name: likp
+        description: Outbound delivery header (SAP table LIKP). One row per delivery.
+        columns:
+          - name: vbeln
+            description: Delivery number (VBELN). Primary key.
+          - name: vgbel
+            description: Reference sales order (VGBEL).
+          - name: werks
+            description: Shipping plant (WERKS).
+          - name: wadat_ist
+            description: >
+              Actual goods issue date (WADAT_IST), when the goods left the plant. Required for OTIF;
+              a known defect leaves it empty on some deliveries.
+
       - name: lips
+        description: Outbound delivery item (SAP table LIPS). One row per delivery line.
+        columns:
+          - name: vbeln
+            description: Delivery number (VBELN); refers to LIKP.
+          - name: posnr
+            description: Delivery item number (POSNR).
+          - name: vgbel
+            description: Reference sales order (VGBEL).
+          - name: vgpos
+            description: Reference sales order item (VGPOS).
+          - name: matnr
+            description: Material delivered (MATNR).
+          - name: lfimg
+            description: Delivered quantity in base units (LFIMG).
+
       - name: mard
+        description: Storage location stock (SAP table MARD). One row per material, plant and storage location.
+        columns:
+          - name: matnr
+            description: Material number (MATNR).
+          - name: werks
+            description: Plant (WERKS).
+          - name: lgort
+            description: Storage location (LGORT).
+          - name: labst
+            description: Unrestricted-use stock in base units (LABST). Should never be negative.
+
       - name: demand_plan
+        description: >
+          Monthly consensus demand plan exported from the planning tool (IBP/APO-style).
+          One row per material, plant and month.
+        columns:
+          - name: matnr
+            description: Material number (MATNR).
+          - name: werks
+            description: Plant (WERKS).
+          - name: plan_month
+            description: First day of the planned month.
+          - name: planned_qty
+            description: Consensus planned quantity in base units, agreed in the monthly S&OP cycle.
+          - name: plan_version
+            description: Plan version label, e.g. V202604 for the plan of April 2026.

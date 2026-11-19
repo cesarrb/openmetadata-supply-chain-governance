@@ -26,6 +26,7 @@ data:          ## (re)generate the synthetic SAP-style ERP tables
 dbt:           ## build staging + marts, docs catalog, then tests (tests last so run_results.json keeps them)
 	$(DBT) run
 	$(DBT) docs generate
+	uv run python scripts/check_docs_coverage.py
 	-$(DBT) test
 
 token:

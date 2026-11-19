@@ -9,6 +9,10 @@ clean-targets: ["target"]
 
 models:
   supply_chain_analytics:
+    # Write model and column descriptions into Postgres comments, so OpenMetadata shows the same text.
+    +persist_docs:
+      relation: true
+      columns: true
     +meta:
       domain: Supply Chain
     staging:

@@ -34,7 +34,8 @@ marts → dashboard (right). OpenMetadata derives it from dbt and from each char
 | **Access control** | One policy: Restricted data rows visible only to the owner team | Verified per persona with OpenMetadata's permission API |
 | **Ownership & trust** | 4 teams, 3 domains, 1 data product, Tier, Gold certification | 17 governed tables, 4 certified |
 | **Governance KPIs** | `scripts/scorecard.py` measures adoption from the API | [docs/SCORECARD.md](docs/SCORECARD.md) |
-| **CI** | GitHub Actions on every pull request | Rebuilds the warehouse, gates on test results, validates governance references |
+| **Documentation** | One description per table and column in dbt YAML (shared definitions as doc blocks), written to Postgres comments | 100 % documented: 26 tables, 182 columns, macros and tests; dbt docs and OpenMetadata show the same text |
+| **CI** | GitHub Actions on every pull request | Rebuilds the warehouse, gates on test results and documentation coverage, validates governance references, publishes the live demo |
 | **Operating model** | [docs/GOVERNANCE_MODEL.md](docs/GOVERNANCE_MODEL.md) | RACI, classification policy, certification and contracts, access, domain onboarding |
 
 ## Architecture

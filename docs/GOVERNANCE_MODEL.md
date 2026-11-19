@@ -123,7 +123,7 @@ Three complementary layers:
 |---|---|---|
 | Source (raw ERP) | OpenMetadata test runner | goods-issue date not null, stock not negative, PO material exists in material master, e-mail format |
 | Transformation | dbt tests (results ingested into OpenMetadata) | unique / not null keys, referential integrity, accepted values, KPI between 0 and 1, forecast accuracy not degenerate |
-| Pull request | GitHub Actions | rebuilds the warehouse, fails if a known defect stops being detected or anything else breaks, validates governance YAML |
+| Pull request | GitHub Actions | rebuilds the warehouse, fails if a known defect stops being detected or anything else breaks, fails if any table or column lacks a description, validates governance YAML |
 
 Three defects are injected on purpose in the synthetic data: 23 deliveries without goods-issue date,
 4 storage locations with negative stock and 1 purchase-order line for a non-existent material.
@@ -169,7 +169,7 @@ run is in [SCORECARD.md](SCORECARD.md). Headline values:
 
 ## 10. Cadence
 
-- **Every pull request:** CI validates governance YAML and rebuilds the warehouse.
+- **Every pull request:** CI validates governance YAML, checks documentation coverage and rebuilds the warehouse.
 - **Weekly (30 min):** stewards review new incidents, auto-classification proposals and pending glossary terms.
 - **Monthly:** the DGO publishes the scorecard to the data council and prioritises the next domain.
 - **Quarterly:** owners re-confirm certification, contracts and access to Restricted assets.

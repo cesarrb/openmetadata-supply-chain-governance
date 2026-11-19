@@ -1,0 +1,27 @@
+version: 2
+macros:
+  - name: test_non_negative
+    description: >
+      Generic data test `non_negative`: fails for every row where the column is below zero.
+      Used on stock quantities, where a negative value means a broken goods movement in SAP.
+      Example: `data_tests: [non_negative]` on `stg_stock.unrestricted_stock_qty`.
+    arguments:
+      - name: model
+        type: relation
+        description: The model or source the test runs on (filled in by dbt).
+      - name: column_name
+        type: string
+        description: The column that must not be negative (filled in by dbt).
+
+  - name: generate_schema_name
+    description: >
+      Overrides dbt's schema naming so models land in `<target schema>_<custom schema>`,
+      e.g. `analytics_staging` and `analytics_marts`. Keeps the staging and mart layers in separate
+      schemas, which OpenMetadata shows as separate containers.
+    arguments:
+      - name: custom_schema_name
+        type: string
+        description: The `+schema` configured for the folder (staging or marts); none means the target schema.
+      - name: node
+        type: object
+        description: The model being built (unused, required by dbt's signature).
